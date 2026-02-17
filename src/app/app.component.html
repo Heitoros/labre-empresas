@@ -71,9 +71,9 @@
       </label>
 
       <button type="submit">Atualizar</button>
-      <button type="button" class="secondary-btn" (click)="baixarMarkdownCompetencia()">Baixar markdown</button>
-      <button type="button" class="secondary-btn" [disabled]="gerandoConsolidado" (click)="baixarMarkdownConsolidado()">
-        {{ gerandoConsolidado ? "Gerando consolidado..." : "Baixar consolidado" }}
+      <button type="button" class="secondary-btn" (click)="baixarDocxCompetencia()">Baixar DOCX regional</button>
+      <button type="button" class="secondary-btn" [disabled]="gerandoConsolidado" (click)="baixarDocxConsolidado()">
+        {{ gerandoConsolidado ? "Gerando consolidado..." : "Baixar DOCX consolidado" }}
       </button>
       <button type="button" class="secondary-btn" (click)="logout()">Sair</button>
     </form>
@@ -175,6 +175,34 @@
             <p>{{ item.totalKm | number: '1.2-2' }} km</p>
           </div>
         </article>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Graficos Percentuais</h2>
+      <div class="tabs-inline">
+        <button type="button" class="ghost-btn" (click)="abaGraficos = 'tipoFonte'">Tipo de fonte</button>
+        <button type="button" class="ghost-btn" (click)="abaGraficos = 'programacao'">Programacao</button>
+      </div>
+
+      <div class="pie-wrap" *ngIf="abaGraficos === 'tipoFonte'">
+        <div class="pie" [style.background]="estiloPizzaConica(dadosPizzaTipoFonte())"></div>
+        <div class="pie-legend">
+          <p *ngFor="let item of dadosPizzaTipoFonte()">
+            <span class="legend-dot" [style.background]="item.color"></span>
+            {{ item.label }}: {{ item.valor }} ({{ item.percentual }}%)
+          </p>
+        </div>
+      </div>
+
+      <div class="pie-wrap" *ngIf="abaGraficos === 'programacao'">
+        <div class="pie" [style.background]="estiloPizzaConica(dadosPizzaProgramacao())"></div>
+        <div class="pie-legend">
+          <p *ngFor="let item of dadosPizzaProgramacao()">
+            <span class="legend-dot" [style.background]="item.color"></span>
+            {{ item.label }}: {{ item.valor }} ({{ item.percentual }}%)
+          </p>
+        </div>
       </div>
     </section>
 

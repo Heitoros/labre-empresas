@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
-import { api } from "./_generated/api";
 import { action, mutation, query } from "./_generated/server";
 
 type TipoFonte = "PAV" | "NAO_PAV";
@@ -160,8 +159,8 @@ export const importarWorkbookComplementar = action({
     operador: v.optional(v.string()),
     perfil: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const sessao = await ctx.runQuery(api.auth.me, { sessionToken: args.sessionToken });
+  handler: async (ctx, args): Promise<any> => {
+    const sessao: any = await (ctx as any).runQuery("auth:me", { sessionToken: args.sessionToken });
     if (!sessao) throw new Error("Sessao invalida ou expirada.");
     if (!["OPERADOR", "GESTOR", "ADMIN"].includes(sessao.usuario.perfil)) {
       throw new Error("Permissao insuficiente para esta operacao.");

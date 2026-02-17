@@ -2,6 +2,7 @@ import { CommonModule } from "@angular/common";
 import { Component, OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { ConvexHttpClient } from "convex/browser";
+import { Document, HeadingLevel, Packer, Paragraph } from "docx";
 import { api } from "../../convex/_generated/api";
 import { environment } from "../environments/environment";
 
@@ -131,6 +132,7 @@ export class AppComponent implements OnInit {
     importacoesComErro: 0,
     totalErros: 0,
   };
+  abaGraficos: "tipoFonte" | "programacao" = "tipoFonte";
 
   meses = [
     { value: 1, label: "Janeiro" },
@@ -756,6 +758,53 @@ export class AppComponent implements OnInit {
     return `${ignoradas} linhas ignoradas (${percentual}% da carga recente). Verifique se a planilha possui linhas de outras regioes.`;
   }
 
+  private percent(part: number, total: number): number {
+    if (total <= 0) return 0;
+    return Number(((part / total) * 100).toFixed(1));
+  }
+
+  dadosPizzaTipoFonte(): Array<{ label: string; valor: number; percentual: number; color: string }> {
+    const total = this.porTipoFonte.reduce((acc, item) => acc + item.totalTrechos, 0);
+    const palette = ["#d95f02", "#1b9e77", "#457b9d", "#e9c46a"];
+    return this.porTipoFonte.map((item, idx) => ({
+      label: item.tipoFonte,
+      valor: item.totalTrechos,
+      percentual: this.percent(item.totalTrechos, total),
+      color: palette[idx % palette.length],
+    }));
+  }
+
+  dadosPizzaProgramacao(): Array<{ label: string; valor: number; percentual: number; color: string }> {
+    const total = this.programados + this.naoProgramados;
+    return [
+      {
+        label: "Programados",
+        valor: this.programados,
+        percentual: this.percent(this.programados, total),
+        color: "#2a9d8f",
+      },
+      {
+        label: "Nao programados",
+        valor: this.naoProgramados,
+        percentual: this.percent(this.naoProgramados, total),
+        color: "#e76f51",
+      },
+    ];
+  }
+
+  estiloPizzaConica(data: Array<{ percentual: number; color: string }>): string {
+    let angle = 0;
+    const slices = data
+      .map((item) => {
+        const start = angle;
+        const inc = (item.percentual / 100) * 360;
+        angle += inc;
+        return `${item.color} ${start}deg ${angle}deg`;
+      })
+      .join(", ");
+    return `conic-gradient(${slices || "#e2e8f0 0deg 360deg"})`;
+  }
+
   formatarDataImportacao(item: ImportacaoResumo): string {
     const ts = item.finalizadoEm ?? item.iniciadoEm;
     if (!ts) return "Sem horario";
@@ -817,6 +866,37 @@ export class AppComponent implements OnInit {
     a.download = this.nomeArquivoMarkdown();
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  private async baixarDocx(nomeArquivo: string, linhas: string[]): Promise<void> {
+    const children: Paragraph[] = [];
+    for (const linha of linhas) {
+      if (linha.startsWith("# ")) {
+        children.push(new Paragraph({ text: linha.replace(/^#\s+/, ""), heading: HeadingLevel.TITLE }));
+      } else if (linha.startsWith("## ")) {
+        children.push(new Paragraph({ text: linha.replace(/^##\s+/, ""), heading: HeadingLevel.HEADING_1 }));
+      } else if (linha.startsWith("- ")) {
+        children.push(new Paragraph({ text: linha.slice(2), bullet: { level: 0 } }));
+      } else if (linha.trim() === "") {
+        children.push(new Paragraph({ text: "" }));
+      } else {
+        children.push(new Paragraph({ text: linha }));
+      }
+    }
+
+    const doc = new Document({ sections: [{ children }] });
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nomeArquivo;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async baixarDocxCompetencia(): Promise<void> {
+    const md = this.gerarMarkdownCompetencia().split("\n");
+    await this.baixarDocx(`relatorio_regiao_${this.regiao}_${this.competencia()}.docx`, md);
   }
 
   async baixarMarkdownConsolidado(): Promise<void> {
@@ -909,11 +989,23 @@ export class AppComponent implements OnInit {
       a.download = `relatorio_consolidado_${this.competencia()}.md`;
       a.click();
       URL.revokeObjectURL(url);
+
+      this._ultimasLinhasConsolidado = linhas;
     } catch (e) {
       this.erro = e instanceof Error ? e.message : String(e);
     } finally {
       this.gerandoConsolidado = false;
     }
+  }
+
+  private _ultimasLinhasConsolidado: string[] | null = null;
+
+  async baixarDocxConsolidado(): Promise<void> {
+    if (!this._ultimasLinhasConsolidado) {
+      await this.baixarMarkdownConsolidado();
+    }
+    if (!this._ultimasLinhasConsolidado) return;
+    await this.baixarDocx(`relatorio_consolidado_${this.competencia()}.docx`, this._ultimasLinhasConsolidado);
   }
 
   competencia(): string {

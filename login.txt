@@ -1,0 +1,10 @@
+
+Boa — nesse campo você precisa usar email, não “ADMIN”.
+Use assim:
+- Email: admin@labre.local
+- Senha: Admin@1234
+Importante:
+- O sistema exige política de senha forte.
+- Se você colocar só “ADMIN” no email ou senha fraca, pode dar esse erro genérico.
+Se mesmo com esses dados não entrar, me avisa que eu te passo o comando de reset da senha pelo terminal em 1 passo.
+▣  Build · gpt-5.3-codex · 17.2s
