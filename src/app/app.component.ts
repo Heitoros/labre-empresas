@@ -68,6 +68,16 @@ type SaudeOperacional = {
   sucessoComErros: number;
   taxaSucesso: number;
 };
+type WorkbookSerie = { label: string; valor: number; percentual: number };
+type WorkbookGrafico = {
+  id: string;
+  aba: string;
+  ordem: number;
+  titulo: string;
+  tipoGrafico: string;
+  total: number;
+  series: WorkbookSerie[];
+};
 
 @Component({
   selector: "app-root",
@@ -133,6 +143,9 @@ export class AppComponent implements OnInit {
     totalErros: 0,
   };
   abaGraficos: "tipoFonte" | "programacao" = "tipoFonte";
+  workbookTipoFonte: "PAV" | "NAO_PAV" = "PAV";
+  workbookAbaSelecionada = "";
+  workbookGraficos: WorkbookGrafico[] = [];
 
   meses = [
     { value: 1, label: "Janeiro" },
@@ -680,6 +693,7 @@ export class AppComponent implements OnInit {
       this.auditoriaRecente = auditoria as AuditoriaEvento[];
       this.saudeOperacional = saude as SaudeOperacional;
       await this.carregarUsuariosAdmin();
+      await this.recarregarGraficosWorkbook();
     } catch (e) {
       if (await this.tratarErroAutenticacao(e)) return;
       this.erro = e instanceof Error ? e.message : String(e);
@@ -803,6 +817,54 @@ export class AppComponent implements OnInit {
       })
       .join(", ");
     return `conic-gradient(${slices || "#e2e8f0 0deg 360deg"})`;
+  }
+
+  private paletteWorkbook = ["#d95f02", "#1b9e77", "#457b9d", "#e9c46a", "#e76f51", "#6d597a", "#264653"];
+
+  workbookAbasDisponiveis(): string[] {
+    const abas = Array.from(new Set(this.workbookGraficos.map((g) => g.aba)));
+    return abas.sort((a, b) => {
+      const na = Number(a);
+      const nb = Number(b);
+      if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+      if (Number.isFinite(na)) return -1;
+      if (Number.isFinite(nb)) return 1;
+      return a.localeCompare(b, "pt-BR");
+    });
+  }
+
+  graficosWorkbookFiltrados(): WorkbookGrafico[] {
+    if (!this.workbookAbaSelecionada) return this.workbookGraficos;
+    return this.workbookGraficos.filter((g) => g.aba === this.workbookAbaSelecionada);
+  }
+
+  estiloPizzaWorkbook(grafico: WorkbookGrafico): string {
+    const data = grafico.series.map((s, i) => ({ percentual: s.percentual, color: this.paletteWorkbook[i % this.paletteWorkbook.length] }));
+    return this.estiloPizzaConica(data);
+  }
+
+  corSerieWorkbook(index: number): string {
+    return this.paletteWorkbook[index % this.paletteWorkbook.length];
+  }
+
+  async recarregarGraficosWorkbook(): Promise<void> {
+    if (!this.sessaoAtual?.token) return;
+
+    const result = await this.client.query(api.workbook.listarGraficosWorkbook, {
+      sessionToken: this.tokenSessao(),
+      regiao: this.regiao,
+      ano: this.ano,
+      mes: this.mes,
+      tipoFonte: this.workbookTipoFonte,
+    });
+
+    this.workbookGraficos = result as WorkbookGrafico[];
+    const abas = this.workbookAbasDisponiveis();
+    if (abas.length === 0) {
+      this.workbookAbaSelecionada = "";
+    } else if (!abas.includes(this.workbookAbaSelecionada)) {
+      this.workbookAbaSelecionada = abas[0];
+    }
   }
 
   formatarDataImportacao(item: ImportacaoResumo): string {

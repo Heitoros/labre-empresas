@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
+import { api } from "./_generated/api";
 import { action, mutation, query } from "./_generated/server";
 
 type TipoFonte = "PAV" | "NAO_PAV";
@@ -160,7 +161,7 @@ export const importarWorkbookComplementar = action({
     perfil: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<any> => {
-    const sessao: any = await (ctx as any).runQuery("auth:me", { sessionToken: args.sessionToken });
+    const sessao: any = await ctx.runQuery(api.auth.me, { sessionToken: args.sessionToken });
     if (!sessao) throw new Error("Sessao invalida ou expirada.");
     if (!["OPERADOR", "GESTOR", "ADMIN"].includes(sessao.usuario.perfil)) {
       throw new Error("Permissao insuficiente para esta operacao.");
@@ -382,5 +383,57 @@ export const obterResumoWorkbook = query({
         ).map(([aba, total]) => ({ aba, total })),
       },
     };
+  },
+});
+
+export const listarGraficosWorkbook = query({
+  args: {
+    sessionToken: v.string(),
+    regiao: v.number(),
+    ano: v.number(),
+    mes: v.number(),
+    tipoFonte: v.union(v.literal("PAV"), v.literal("NAO_PAV")),
+  },
+  handler: async (ctx, args) => {
+    const sessao = await ctx.runQuery(api.auth.me, { sessionToken: args.sessionToken });
+    if (!sessao) throw new Error("Sessao invalida ou expirada.");
+
+    const graficos = await ctx.db
+      .query("workbookGraficos")
+      .withIndex("by_regiao_ano_mes_tipo", (q) =>
+        q.eq("regiao", args.regiao).eq("ano", args.ano).eq("mes", args.mes).eq("tipoFonte", args.tipoFonte),
+      )
+      .collect();
+
+    const payload = graficos.map((g) => {
+      const total = g.valores.reduce((acc, v) => acc + v, 0);
+      const series = g.labels.map((label, i) => {
+        const valor = g.valores[i] ?? 0;
+        const percentual = total > 0 ? Number(((valor / total) * 100).toFixed(1)) : 0;
+        return { label, valor, percentual };
+      });
+
+      return {
+        id: g._id,
+        aba: g.aba,
+        ordem: g.ordem,
+        titulo: g.titulo,
+        tipoGrafico: g.tipoGrafico,
+        labels: g.labels,
+        valores: g.valores,
+        total,
+        series,
+      };
+    });
+
+    return payload.sort((a, b) => {
+      if (a.aba === b.aba) return a.ordem - b.ordem;
+      const na = Number(a.aba);
+      const nb = Number(b.aba);
+      if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+      if (Number.isFinite(na)) return -1;
+      if (Number.isFinite(nb)) return 1;
+      return a.aba.localeCompare(b.aba, "pt-BR");
+    });
   },
 });

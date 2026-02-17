@@ -219,6 +219,24 @@ h2 {
   color: #334155;
 }
 
+.workbook-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.workbook-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px;
+  background: #fcfdff;
+}
+
+.workbook-item h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
 .legend-dot {
   display: inline-block;
   width: 10px;
@@ -438,5 +456,9 @@ th {
   .pie-wrap {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .workbook-grid {
+    grid-template-columns: 1fr;
   }
 }

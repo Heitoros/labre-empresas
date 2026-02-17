@@ -206,6 +206,42 @@
       </div>
     </section>
 
+    <section class="card full-width">
+      <h2>Graficos do Workbook (abas 1..32 e TT)</h2>
+      <div class="history-toolbar">
+        <label>
+          Tipo
+          <select [(ngModel)]="workbookTipoFonte" name="workbookTipoFonte" (change)="recarregarGraficosWorkbook()">
+            <option [ngValue]="'PAV'">PAV</option>
+            <option [ngValue]="'NAO_PAV'">NAO_PAV</option>
+          </select>
+        </label>
+
+        <label>
+          Aba
+          <select [(ngModel)]="workbookAbaSelecionada" name="workbookAbaSelecionada">
+            <option *ngFor="let aba of workbookAbasDisponiveis()" [ngValue]="aba">{{ aba }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="workbook-grid" *ngIf="graficosWorkbookFiltrados().length > 0; else semGraficosWorkbookTpl">
+        <article class="workbook-item" *ngFor="let g of graficosWorkbookFiltrados()">
+          <h3>{{ g.titulo }}</h3>
+          <p class="card-meta">Aba {{ g.aba }}</p>
+          <div class="pie-wrap">
+            <div class="pie" [style.background]="estiloPizzaWorkbook(g)"></div>
+            <div class="pie-legend">
+              <p *ngFor="let s of g.series; let i = index">
+                <span class="legend-dot" [style.background]="corSerieWorkbook(i)"></span>
+                {{ s.label }}: {{ s.valor | number: '1.2-2' }} ({{ s.percentual }}%)
+              </p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section class="card">
       <h2>Top SRE por KM</h2>
       <div class="bar-list">
@@ -396,6 +432,10 @@
 
   <ng-template #semInconsistenciasTpl>
     <p class="empty-state">Nenhuma inconsistencia registrada para este periodo.</p>
+  </ng-template>
+
+  <ng-template #semGraficosWorkbookTpl>
+    <p class="empty-state">Nenhum grafico do workbook para este tipo/competencia. Use a importacao com "Processar TT e graficos".</p>
   </ng-template>
   </ng-container>
 
