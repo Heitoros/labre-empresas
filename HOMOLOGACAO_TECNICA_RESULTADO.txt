@@ -1,0 +1,27 @@
+HOMOLOGACAO TECNICA - RESULTADO INICIAL
+
+Data: 2026-02-15
+Ambiente backend de producao: https://benevolent-raccoon-460.convex.cloud
+
+1) BUILD FRONTEND
+- npm run build: OK
+- Artefato de publicacao gerado: release/labre-empresas-prod.zip
+
+2) SMOKE TEST BACKEND (PRODUCAO)
+- Login ADMIN: OK
+- Troca obrigatoria de senha no primeiro acesso: OK
+- Importacao lote async (dryRun): OK
+  - PAV: SUCESSO (83 recebidas, 82 validas, 1 ignorada)
+  - NAO_PAV: SUCESSO (116 recebidas, 114 validas, 2 ignoradas)
+- Saude operacional (24h): OK
+  - totalImportacoes: 2
+  - erros: 0
+  - taxaSucesso: 100%
+- Auditoria recente: OK (eventos de enfileiramento e finalizacao gravados)
+
+3) PENDENCIA PARA FECHAR HOMOLOGACAO FUNCIONAL
+- Validacao de usuario-chave no frontend publicado (fluxo completo):
+  a) login
+  b) importacao real
+  c) download de relatorios
+  d) aprovacao formal

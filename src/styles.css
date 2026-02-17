@@ -1,0 +1,23 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  font-family: "DM Sans", "Segoe UI", sans-serif;
+  color: #1f2933;
+  background:
+    radial-gradient(circle at 0% 0%, #efe3d2 0%, transparent 40%),
+    radial-gradient(circle at 100% 20%, #d5e7ee 0%, transparent 35%),
+    linear-gradient(180deg, #f4efe6, #f9f6f1);
+  min-height: 100%;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Fraunces", serif;
+}

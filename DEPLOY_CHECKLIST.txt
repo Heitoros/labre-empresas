@@ -1,0 +1,32 @@
+CHECKLIST DE HARDENING E DEPLOY - LABRE EMPRESAS
+
+1) QUALIDADE TECNICA
+- [ ] npm install
+- [ ] npm run build
+- [ ] npm run fechamento:dezembro:dry
+- [ ] Validar login, logout e troca obrigatoria de senha
+- [ ] Validar upload individual e lote (PAV + NAO_PAV)
+
+2) SEGURANCA
+- [ ] Confirmar que operacoes protegidas exigem sessionToken
+- [ ] Confirmar perfis (OPERADOR/GESTOR/ADMIN)
+- [ ] Confirmar politica de senha ativa (8+, maiuscula, minuscula, numero, simbolo)
+- [ ] Confirmar expiracao de sessao e retorno para login
+
+3) OPERACAO
+- [ ] Conferir painel de jobs/auditoria em tempo real
+- [ ] Conferir saude operacional (ultimas 24h)
+- [ ] Conferir limites de upload (25MB)
+
+4) RELATORIOS
+- [ ] Gerar regional markdown
+- [ ] Gerar consolidado markdown
+- [ ] Gerar regional DOCX
+- [ ] Gerar consolidado DOCX
+- [ ] Gerar DOCX oficial
+
+5) DEPLOY
+- [ ] npm run release:check
+- [ ] npm run convex:deploy
+- [ ] Publicar frontend (ng build + hosting)
+- [ ] Executar smoke test em producao (login + importacao + relatorio)

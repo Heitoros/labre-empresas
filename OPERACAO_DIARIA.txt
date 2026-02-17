@@ -1,0 +1,132 @@
+OPERACAO DIARIA - LABRE EMPRESAS
+
+Objetivo:
+Executar a rotina diaria/mensal de importacao de dados, validacao e geracao de relatorios sem depender de comandos complexos.
+
+Data de referencia:
+2026-02-15
+
+------------------------------------------------------------
+1) PREPARACAO (UMA VEZ POR MAQUINA)
+------------------------------------------------------------
+
+1. Abrir terminal na pasta do projeto:
+   C:\Users\Heitor\projetos\labre-empresas
+
+2. Instalar dependencias:
+   npm install
+
+3. Verificar .env com CONVEX_URL valido.
+
+4. Subir o frontend local:
+   npm run dev
+
+------------------------------------------------------------
+2) FLUXO DIARIO NO PAINEL (WEB)
+------------------------------------------------------------
+
+1. No topo do painel, selecionar:
+   - Regiao
+   - Ano
+   - Mes
+
+2. No card "Importacao em tempo real", informar:
+   - Operador (nome)
+   - Perfil (OPERADOR/GESTOR/ADMIN)
+
+3. Preferir "Importar lote PAV + NAO_PAV":
+   - Selecionar Arquivo PAV
+   - Selecionar Arquivo NAO_PAV
+   - Ajustar checkboxes:
+     a) Limpar dados atuais da competencia/tipo antes de importar
+     b) Processar TT e graficos das abas do workbook
+   - Clicar em "Importar lote PAV + NAO_PAV"
+
+4. Acompanhar status:
+   - Mensagem de progresso no card
+   - Historico de importacoes
+   - Painel de Jobs e Auditoria
+
+5. Validar resultado:
+   - KPI total de trechos e km
+   - Inconsistencias por codigo
+   - Importacoes sem ERRO fatal
+
+------------------------------------------------------------
+3) GERACAO DE RELATORIOS (PAINEL)
+------------------------------------------------------------
+
+1. Relatorio regional (markdown):
+   - Botao "Baixar markdown"
+
+2. Relatorio consolidado (markdown):
+   - Botao "Baixar consolidado"
+
+------------------------------------------------------------
+4) COMANDOS OPERACIONAIS (CLI)
+------------------------------------------------------------
+
+Importacao / validacao:
+- Dry-run de fechamento Dezembro:
+  npm run fechamento:dezembro:dry
+
+- Fechamento oficial Dezembro:
+  npm run fechamento:dezembro
+
+Relatorios DOCX:
+- Regional:
+  npm run relatorio:docx -- --regiao <REGIAO> --ano <ANO> --mes <MES>
+
+- Consolidado:
+  npm run relatorio:docx:consolidado -- --ano <ANO> --mes <MES>
+
+- Oficial (template tecnico):
+  npm run relatorio:docx:oficial -- --regiao <REGIAO> --ano <ANO> --mes <MES>
+
+Workbooks completos (todos os graficos):
+- Todos os workbooks de Dezembro:
+  npm run workbook:docx:todos
+
+Auditoria de planilhas:
+- Validar estrutura das planilhas:
+  npm run auditar:trechos -- --pasta "C:/Users/Heitor/projetos/Dezembro/Dezembro"
+
+------------------------------------------------------------
+5) CHECKLIST RAPIDO DE ACEITE
+------------------------------------------------------------
+
+Antes de encerrar o dia/competencia:
+
+[ ] Importacoes com status SUCESSO ou SUCESSO_COM_ERROS
+[ ] Nenhum status ERRO fatal no painel
+[ ] Quantidade gravada coerente com planilhas
+[ ] Inconsistencias revisadas
+[ ] Relatorios gerados em C:\Users\Heitor\projetos\labre-empresas\relatorios
+
+------------------------------------------------------------
+6) RESOLUCAO DE PROBLEMAS
+------------------------------------------------------------
+
+Se a importacao falhar:
+1. Ver detalhes no "Painel de Jobs e Auditoria".
+2. Reprocessar com "Limpar dados atuais..." habilitado.
+3. Executar auditoria da pasta de entrada com auditar:trechos.
+4. Confirmar que a aba "Trechos" existe e tem cabecalho valido.
+
+Se houver muitas linhas ignoradas:
+1. Verificar se a planilha contem linhas de outras regioes.
+2. Conferir regiao selecionada no painel.
+
+------------------------------------------------------------
+7) PRODUCAO / PUBLICACAO
+------------------------------------------------------------
+
+Para publicar backend/app:
+- convex deploy:
+  npm run convex:deploy
+
+- build + deploy (atalho):
+  npm run app:deploy
+
+------------------------------------------------------------
+FIM

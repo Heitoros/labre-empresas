@@ -1,0 +1,384 @@
+<div class="page">
+  <section class="upload-card" *ngIf="!sessaoAtual">
+    <h2>Acesso ao sistema</h2>
+    <div class="upload-grid">
+      <label>
+        Email
+        <input [(ngModel)]="emailLogin" name="emailLogin" type="email" placeholder="seu@email.com" />
+      </label>
+
+      <label>
+        Senha
+        <input [(ngModel)]="senhaLogin" name="senhaLogin" type="password" placeholder="******" />
+      </label>
+
+      <button type="button" (click)="login()">Entrar</button>
+    </div>
+    <p class="card-meta" *ngIf="authMensagem">{{ authMensagem }}</p>
+  </section>
+
+  <section class="upload-card" *ngIf="sessaoAtual?.precisaTrocaSenha">
+    <h2>Troca obrigatoria de senha</h2>
+    <div class="upload-grid">
+      <label>
+        Senha atual
+        <input [(ngModel)]="senhaAtualTroca" name="senhaAtualTroca" type="password" />
+      </label>
+
+      <label>
+        Nova senha
+        <input [(ngModel)]="novaSenhaTroca" name="novaSenhaTroca" type="password" />
+      </label>
+
+      <label>
+        Confirmar nova senha
+        <input [(ngModel)]="confirmarSenhaTroca" name="confirmarSenhaTroca" type="password" />
+      </label>
+
+      <button type="button" (click)="alterarSenhaObrigatoria()">Salvar nova senha</button>
+      <button type="button" class="secondary-btn" (click)="logout()">Sair</button>
+    </div>
+    <p class="card-meta" *ngIf="authMensagem">{{ authMensagem }}</p>
+    <p class="card-meta">Politica minima: 8+ caracteres com maiuscula, minuscula, numero e simbolo.</p>
+  </section>
+
+  <ng-container *ngIf="sessaoAtual && !sessaoAtual.precisaTrocaSenha">
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Sistema de Relatorio Tecnico</p>
+      <h1>Painel de Producao Automatizada</h1>
+      <p class="subtitle">Leitura consolidada por regiao, ano e mes para acelerar a geracao de relatorios.</p>
+    </div>
+
+    <form class="filters" (ngSubmit)="recarregar()">
+      <label>
+        Regiao
+        <select [(ngModel)]="regiao" name="regiao">
+          <option *ngFor="let r of regioes" [ngValue]="r">Regiao {{ r }}</option>
+        </select>
+      </label>
+
+      <label>
+        Ano
+        <input [(ngModel)]="ano" name="ano" type="number" min="2000" max="2100" />
+      </label>
+
+      <label>
+        Mes
+        <select [(ngModel)]="mes" name="mes">
+          <option *ngFor="let m of meses" [ngValue]="m.value">{{ m.label }}</option>
+        </select>
+      </label>
+
+      <button type="submit">Atualizar</button>
+      <button type="button" class="secondary-btn" (click)="baixarMarkdownCompetencia()">Baixar markdown</button>
+      <button type="button" class="secondary-btn" [disabled]="gerandoConsolidado" (click)="baixarMarkdownConsolidado()">
+        {{ gerandoConsolidado ? "Gerando consolidado..." : "Baixar consolidado" }}
+      </button>
+      <button type="button" class="secondary-btn" (click)="logout()">Sair</button>
+    </form>
+  </header>
+
+  <section class="upload-card">
+    <h2>Importacao em tempo real</h2>
+    <div class="upload-grid">
+      <label>
+        Operador
+        <input [(ngModel)]="operador" name="operador" type="text" placeholder="Nome do operador" (blur)="salvarPerfilOperacao()" />
+      </label>
+
+      <label>
+        Perfil
+        <select [(ngModel)]="perfil" name="perfil" (change)="salvarPerfilOperacao()">
+          <option [ngValue]="'OPERADOR'">OPERADOR</option>
+          <option [ngValue]="'GESTOR'">GESTOR</option>
+          <option [ngValue]="'ADMIN'">ADMIN</option>
+        </select>
+      </label>
+
+      <label>
+        Tipo de fonte
+        <select [(ngModel)]="uploadTipoFonte" name="uploadTipoFonte">
+          <option [ngValue]="'PAV'">PAV</option>
+          <option [ngValue]="'NAO_PAV'">NAO_PAV</option>
+        </select>
+      </label>
+
+      <label>
+        Planilha (.xlsx)
+        <input type="file" accept=".xlsx" (change)="onArquivoSelecionado($event)" />
+      </label>
+
+      <label class="check-inline">
+        <input type="checkbox" [(ngModel)]="uploadLimparAntes" name="uploadLimparAntes" />
+        Limpar dados atuais da competencia/tipo antes de importar
+      </label>
+
+      <label class="check-inline">
+        <input type="checkbox" [(ngModel)]="uploadProcessarComplementar" name="uploadProcessarComplementar" />
+        Processar TT e graficos das abas do workbook
+      </label>
+
+      <button type="button" [disabled]="uploadEmAndamento" (click)="importarArquivoSelecionado()">
+        {{ uploadEmAndamento ? "Importando..." : "Importar agora" }}
+      </button>
+    </div>
+
+    <div class="upload-grid lote-grid">
+      <label>
+        Arquivo PAV
+        <input type="file" accept=".xlsx" (change)="onArquivoPavSelecionado($event)" />
+      </label>
+
+      <label>
+        Arquivo NAO_PAV
+        <input type="file" accept=".xlsx" (change)="onArquivoNaoPavSelecionado($event)" />
+      </label>
+
+      <button type="button" [disabled]="uploadEmAndamento" (click)="importarLoteSelecionado()">
+        {{ uploadEmAndamento ? "Processando lote..." : "Importar lote PAV + NAO_PAV" }}
+      </button>
+    </div>
+    <p class="card-meta" *ngIf="uploadMensagem">{{ uploadMensagem }}</p>
+  </section>
+
+  <main class="grid" *ngIf="!loading; else loadingTpl">
+    <p class="error" *ngIf="erro">{{ erro }}</p>
+
+    <section class="kpi-row">
+      <article class="kpi">
+        <span>Competencia</span>
+        <strong>{{ competencia() }}</strong>
+      </article>
+      <article class="kpi">
+        <span>Total de Trechos</span>
+        <strong>{{ totalTrechos }}</strong>
+      </article>
+      <article class="kpi">
+        <span>Total de Extensao</span>
+        <strong>{{ totalKm | number: '1.2-2' }} km</strong>
+      </article>
+      <article class="kpi">
+        <span>Importacoes com Erro</span>
+        <strong>{{ resumoInconsistencias.importacoesComErro }}</strong>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>Distribuicao por Tipo de Fonte</h2>
+      <div class="source-grid">
+        <article class="source-item" *ngFor="let item of porTipoFonte; let i = index">
+          <div class="dot" [style.background]="i === 0 ? '#d95f02' : '#1b9e77'"></div>
+          <div>
+            <h3>{{ item.tipoFonte }}</h3>
+            <p>{{ item.totalTrechos }} trechos</p>
+            <p>{{ item.totalKm | number: '1.2-2' }} km</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Top SRE por KM</h2>
+      <div class="bar-list">
+        <article class="bar-row" *ngFor="let item of topSrePorKm | slice:0:8">
+          <span class="code">{{ item.sre }}</span>
+          <div class="bar-bg">
+            <div class="bar-fill" [style.width]="barraKm(item.km)"></div>
+          </div>
+          <span class="value">{{ item.km | number: '1.2-2' }}</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Inconsistencias por Codigo</h2>
+      <p class="card-meta">{{ resumoInconsistencias.totalErros }} ocorrencias na competencia.</p>
+
+      <div class="bar-list" *ngIf="porCodigoInconsistencia.length > 0; else semInconsistenciasTpl">
+        <article class="bar-row" *ngFor="let item of porCodigoInconsistencia | slice:0:8">
+          <span class="code">{{ item.codigo }}</span>
+          <div class="bar-bg inconsistencia-bg">
+            <div class="bar-fill inconsistencia-fill" [style.width]="barraInconsistencia(item.total)"></div>
+          </div>
+          <span class="value">{{ item.total }}</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="card full-width">
+      <h2>Historico de Importacoes</h2>
+      <div class="history-toolbar">
+        <p class="card-meta">
+          Exibindo
+          {{ mostrarHistoricoCompleto ? "historico completo" : "ultima importacao por tipo" }}.
+        </p>
+        <button type="button" class="ghost-btn" (click)="mostrarHistoricoCompleto = !mostrarHistoricoCompleto">
+          {{ mostrarHistoricoCompleto ? "Ver apenas ultimas" : "Ver historico completo" }}
+        </button>
+      </div>
+      <p class="warning-note" *ngIf="alertaIgnoradasElevadas()">{{ textoAlertaIgnoradas() }}</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Horario</th>
+              <th>Tipo</th>
+              <th>Status</th>
+              <th>Arquivo</th>
+              <th>Validas</th>
+              <th>Ignoradas</th>
+              <th>Erros</th>
+              <th>Gravados</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of importacoesVisiveis()">
+              <td>{{ formatarDataImportacao(item) }}</td>
+              <td>{{ item.tipoFonte }}</td>
+              <td>{{ item.status }}</td>
+              <td>{{ item.arquivoOrigem }}</td>
+              <td>{{ item.linhasValidas }}</td>
+              <td>{{ item.linhasIgnoradas }}</td>
+              <td>{{ item.linhasComErro }}</td>
+              <td>{{ item.gravados }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card full-width">
+      <h2>Painel de Jobs e Auditoria</h2>
+      <div class="health-strip" *ngIf="saudeOperacional">
+        <span>Ultimas {{ saudeOperacional.periodoHoras }}h:</span>
+        <span>Total {{ saudeOperacional.totalImportacoes }}</span>
+        <span>Processando {{ saudeOperacional.processando }}</span>
+        <span>Erros {{ saudeOperacional.erros }}</span>
+        <span>Sucesso c/ erros {{ saudeOperacional.sucessoComErros }}</span>
+        <span>Taxa sucesso {{ saudeOperacional.taxaSucesso }}%</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Horario</th>
+              <th>Acao</th>
+              <th>Entidade</th>
+              <th>Competencia</th>
+              <th>Operador</th>
+              <th>Perfil</th>
+              <th>Detalhes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let evt of auditoriaRecente">
+              <td>{{ evt.criadoEm | date: 'short' }}</td>
+              <td>{{ evt.acao }}</td>
+              <td>{{ evt.entidade }}</td>
+              <td>{{ evt.competencia }}</td>
+              <td>{{ evt.operador || '-' }}</td>
+              <td>{{ evt.perfil || '-' }}</td>
+              <td>{{ evt.detalhes || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card full-width" *ngIf="sessaoAtual?.usuario?.perfil === 'ADMIN'">
+      <h2>Gestao de Usuarios (ADMIN)</h2>
+      <div class="upload-grid lote-grid">
+        <label>
+          Nome
+          <input [(ngModel)]="novoUsuarioNome" name="novoUsuarioNome" type="text" />
+        </label>
+        <label>
+          Email
+          <input [(ngModel)]="novoUsuarioEmail" name="novoUsuarioEmail" type="email" />
+        </label>
+        <label>
+          Senha temporaria
+          <input [(ngModel)]="novoUsuarioSenha" name="novoUsuarioSenha" type="text" />
+        </label>
+        <label>
+          Perfil
+          <select [(ngModel)]="novoUsuarioPerfil" name="novoUsuarioPerfil">
+            <option [ngValue]="'OPERADOR'">OPERADOR</option>
+            <option [ngValue]="'GESTOR'">GESTOR</option>
+            <option [ngValue]="'ADMIN'">ADMIN</option>
+          </select>
+        </label>
+        <button type="button" (click)="criarUsuarioAdmin()">Criar usuario</button>
+      </div>
+
+      <div class="table-wrap" style="margin-top: 12px">
+        <div style="margin-bottom: 10px">
+          <label>
+            Buscar usuario
+            <input [(ngModel)]="filtroUsuarios" name="filtroUsuarios" type="text" placeholder="Nome, email ou perfil" />
+          </label>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Perfil</th>
+              <th>Ativo</th>
+              <th>Troca senha</th>
+              <th>Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of usuariosFiltrados()">
+              <td><input [(ngModel)]="user.nome" [name]="'nome_'+user.id" type="text" /></td>
+              <td>{{ user.email }}</td>
+              <td>
+                <select [(ngModel)]="user.perfil" [name]="'perfil_'+user.id">
+                  <option [ngValue]="'OPERADOR'">OPERADOR</option>
+                  <option [ngValue]="'GESTOR'">GESTOR</option>
+                  <option [ngValue]="'ADMIN'">ADMIN</option>
+                </select>
+              </td>
+              <td>{{ user.ativo ? 'SIM' : 'NAO' }}</td>
+              <td>{{ user.forcarTrocaSenha ? 'SIM' : 'NAO' }}</td>
+              <td>
+                <button type="button" class="secondary-btn" (click)="atualizarUsuarioAdmin(user)">Salvar</button>
+                <button type="button" class="secondary-btn" (click)="abrirConfirmacaoReset(user)">Reset senha</button>
+                <button type="button" class="secondary-btn" *ngIf="user.ativo" (click)="abrirConfirmacaoAtivo(user, false)">
+                  Inativar
+                </button>
+                <button type="button" class="secondary-btn" *ngIf="!user.ativo" (click)="abrirConfirmacaoAtivo(user, true)">
+                  Ativar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <ng-template #loadingTpl>
+    <main class="grid">
+      <section class="card">Carregando dados da competencia selecionada...</section>
+    </main>
+  </ng-template>
+
+  <ng-template #semInconsistenciasTpl>
+    <p class="empty-state">Nenhuma inconsistencia registrada para este periodo.</p>
+  </ng-template>
+  </ng-container>
+
+  <div class="modal-backdrop" *ngIf="confirmacaoModalAberto">
+    <div class="modal-card">
+      <h3>{{ confirmacaoModalTitulo }}</h3>
+      <p>{{ confirmacaoModalMensagem }}</p>
+      <div class="modal-actions">
+        <button type="button" class="secondary-btn" (click)="fecharConfirmacao()">Cancelar</button>
+        <button type="button" (click)="confirmarAcaoModal()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
