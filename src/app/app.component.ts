@@ -1069,8 +1069,8 @@ export class AppComponent implements OnInit {
         if (a.aba === b.aba) return a.ordem - b.ordem;
       }
 
-      if (a.aba === "TT" && b.aba !== "TT") return -1;
-      if (b.aba === "TT" && a.aba !== "TT") return 1;
+      if (a.aba === "TT" && b.aba !== "TT") return 1;
+      if (b.aba === "TT" && a.aba !== "TT") return -1;
 
       const na = Number(a.aba);
       const nb = Number(b.aba);
@@ -1238,7 +1238,7 @@ export class AppComponent implements OnInit {
       children.push(new Paragraph({ text: "5. Graficos do Workbook", heading: HeadingLevel.HEADING_1 }));
       children.push(
         new Paragraph(
-          "Para padronizacao da emissao automatica, esta secao inclui o primeiro grafico de cada titulo no workbook (priorizando a aba TT quando existente), mantendo os valores e percentuais extraidos.",
+          "Para padronizacao da emissao automatica, esta secao inclui o primeiro grafico de cada titulo no workbook (priorizando as abas numericas e usando TT como fallback), mantendo os valores e percentuais extraidos.",
         ),
       );
 
