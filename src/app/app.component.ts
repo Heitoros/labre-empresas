@@ -2,7 +2,21 @@ import { CommonModule } from "@angular/common";
 import { Component, OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { ConvexHttpClient } from "convex/browser";
-import { Document, HeadingLevel, Packer, Paragraph } from "docx";
+import {
+  AlignmentType,
+  Document,
+  HeadingLevel,
+  ImageRun,
+  Packer,
+  PageBreak,
+  Paragraph,
+  Table,
+  TableCell,
+  TableOfContents,
+  TableRow,
+  TextRun,
+  WidthType,
+} from "docx";
 import { api } from "../../convex/_generated/api";
 import { environment } from "../environments/environment";
 
@@ -956,9 +970,312 @@ export class AppComponent implements OnInit {
     URL.revokeObjectURL(url);
   }
 
+  private mesLabel(value: number): string {
+    return this.meses.find((m) => m.value === value)?.label ?? String(value);
+  }
+
+  private formatarNumero(value: number, casas = 2): string {
+    return new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: casas,
+      maximumFractionDigits: casas,
+    }).format(value);
+  }
+
+  private formatarDataHora(ts?: number): string {
+    if (!ts) return "-";
+    return new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(ts);
+  }
+
+  private dataUrlParaBytes(dataUrl: string): Uint8Array {
+    const base64 = dataUrl.split(",")[1] ?? "";
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  private async renderizarPizzaWorkbook(titulo: string, series: WorkbookSerie[]): Promise<Uint8Array> {
+    const width = 980;
+    const height = 560;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Falha ao inicializar contexto grafico do relatorio.");
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "#1f2933";
+    ctx.font = "bold 24px DM Sans, Segoe UI, sans-serif";
+    ctx.fillText(titulo.slice(0, 82), 30, 42);
+
+    const total = series.reduce((acc, s) => acc + (s.valor ?? 0), 0);
+    const cx = 270;
+    const cy = 300;
+    const radius = 170;
+    let current = -Math.PI / 2;
+
+    for (let i = 0; i < series.length; i += 1) {
+      const s = series[i];
+      const percentual = total > 0 ? (s.valor / total) * 100 : s.percentual;
+      const angle = (percentual / 100) * Math.PI * 2;
+      const color = this.paletteWorkbook[i % this.paletteWorkbook.length];
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, current, current + angle);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      current += angle;
+    }
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(cx, cy, 70, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#334e68";
+    ctx.font = "bold 18px DM Sans, Segoe UI, sans-serif";
+    ctx.fillText("Total", cx - 24, cy - 6);
+    ctx.font = "bold 20px DM Sans, Segoe UI, sans-serif";
+    ctx.fillText(this.formatarNumero(total, 2), cx - 42, cy + 20);
+
+    let y = 110;
+    for (let i = 0; i < series.length; i += 1) {
+      const s = series[i];
+      const color = this.paletteWorkbook[i % this.paletteWorkbook.length];
+
+      ctx.fillStyle = color;
+      ctx.fillRect(520, y - 12, 18, 18);
+      ctx.fillStyle = "#102a43";
+      ctx.font = "16px DM Sans, Segoe UI, sans-serif";
+      const linha = `${s.label}: ${this.formatarNumero(s.valor, 2)} (${this.formatarNumero(s.percentual, 1)}%)`;
+      ctx.fillText(linha.slice(0, 60), 548, y + 2);
+      y += 28;
+      if (y > 520) break;
+    }
+
+    return this.dataUrlParaBytes(canvas.toDataURL("image/png"));
+  }
+
+  private selecionarPrimeiroGraficoPorAba(graficos: WorkbookGrafico[]): WorkbookGrafico[] {
+    const ordenados = [...graficos].sort((a, b) => {
+      if (a.aba === b.aba) return a.ordem - b.ordem;
+      const na = Number(a.aba);
+      const nb = Number(b.aba);
+      if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+      if (Number.isFinite(na)) return -1;
+      if (Number.isFinite(nb)) return 1;
+      return a.aba.localeCompare(b.aba, "pt-BR");
+    });
+
+    const porAba = new Map<string, WorkbookGrafico>();
+    for (const g of ordenados) {
+      if (!porAba.has(g.aba)) porAba.set(g.aba, g);
+    }
+    return Array.from(porAba.values());
+  }
+
+  private tabela2Colunas(linhas: Array<[string, string]>): Table {
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: linhas.map(
+        ([k, v]) =>
+          new TableRow({
+            children: [
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: k, bold: true })] })] }),
+              new TableCell({ children: [new Paragraph(v)] }),
+            ],
+          }),
+      ),
+    });
+  }
+
   async baixarDocxCompetencia(): Promise<void> {
-    const md = this.gerarMarkdownCompetencia().split("\n");
-    await this.baixarDocx(`relatorio_regiao_${this.regiao}_${this.competencia()}.docx`, md);
+    if (!this.sessaoAtual?.token) return;
+
+    try {
+      const [payload, graficos, inconsistencias, base, workbookPavRaw, workbookNaoPavRaw] = await Promise.all([
+        this.client.query(api.trechos.gerarPayloadRelatorio, {
+          regiao: this.regiao,
+          ano: this.ano,
+          mes: this.mes,
+        }),
+        this.client.query(api.trechos.obterGraficosCompetencia, {
+          regiao: this.regiao,
+          ano: this.ano,
+          mes: this.mes,
+        }),
+        this.client.query(api.trechos.obterInconsistenciasImportacao, {
+          regiao: this.regiao,
+          ano: this.ano,
+          mes: this.mes,
+        }),
+        this.client.query(api.trechos.obterBaseConsolidada, {
+          regiao: this.regiao,
+          ano: this.ano,
+          mes: this.mes,
+        }),
+        this.client.query(api.workbook.listarGraficosWorkbook, {
+          sessionToken: this.tokenSessao(),
+          regiao: this.regiao,
+          ano: this.ano,
+          mes: this.mes,
+          tipoFonte: "PAV",
+        }),
+        this.client.query(api.workbook.listarGraficosWorkbook, {
+          sessionToken: this.tokenSessao(),
+          regiao: this.regiao,
+          ano: this.ano,
+          mes: this.mes,
+          tipoFonte: "NAO_PAV",
+        }),
+      ]);
+
+      const trechos = (base as any).trechos as Array<any>;
+      const importacoes = (base as any).importacoes as Array<any>;
+
+      const pav = trechos.filter((t) => t.tipoFonte === "PAV");
+      const naoPav = trechos.filter((t) => t.tipoFonte === "NAO_PAV");
+
+      const pavKm = pav.reduce((acc, t) => acc + (t.extKm ?? 0), 0);
+      const naoPavKm = naoPav.reduce((acc, t) => acc + (t.extKm ?? 0), 0);
+
+      const workbookPav = this.selecionarPrimeiroGraficoPorAba(workbookPavRaw as WorkbookGrafico[]);
+      const workbookNaoPav = this.selecionarPrimeiroGraficoPorAba(workbookNaoPavRaw as WorkbookGrafico[]);
+
+      const children: Array<Paragraph | Table> = [
+        new Paragraph({
+          text: "ESTADO DO TOCANTINS",
+          alignment: AlignmentType.CENTER,
+          heading: HeadingLevel.HEADING_1,
+        }),
+        new Paragraph({
+          text: "AGENCIA DE TRANSPORTES, OBRAS E INFRAESTRUTURA - AGETO",
+          alignment: AlignmentType.CENTER,
+        }),
+        new Paragraph({ text: "" }),
+        new Paragraph({
+          text: "PRODUTO 02 - RELATORIO DE ACOMPANHAMENTO TECNICO / AMBIENTAL",
+          alignment: AlignmentType.CENTER,
+          heading: HeadingLevel.HEADING_2,
+        }),
+        new Paragraph({
+          text: `REGIAO ${String(this.regiao).padStart(2, "0")} DE CONSERVACAO`,
+          alignment: AlignmentType.CENTER,
+          heading: HeadingLevel.HEADING_2,
+        }),
+        new Paragraph({
+          text: `${this.mesLabel(this.mes).toUpperCase()} DE ${this.ano}`,
+          alignment: AlignmentType.CENTER,
+        }),
+        new Paragraph({ children: [new PageBreak()] }),
+
+        new Paragraph({ text: "SUMARIO", heading: HeadingLevel.HEADING_1 }),
+        new TableOfContents("", { headingStyleRange: "1-3", hyperlink: true }),
+        new Paragraph({ children: [new PageBreak()] }),
+
+        new Paragraph({ text: "1. Apresentacao", heading: HeadingLevel.HEADING_1 }),
+        new Paragraph(
+          `Este relatorio sintetiza os resultados da competencia ${this.competencia()} para a Regiao ${this.regiao}, com base nas importacoes de planilhas, auditoria operacional e graficos complementares do workbook.`,
+        ),
+        new Paragraph({ text: "" }),
+
+        new Paragraph({ text: "2. Indicadores Gerais", heading: HeadingLevel.HEADING_1 }),
+        this.tabela2Colunas([
+          ["Competencia", this.competencia()],
+          ["Total de trechos", String((graficos as any).kpis.totalTrechos)],
+          ["Total de extensao (km)", this.formatarNumero((graficos as any).kpis.totalKm, 2)],
+          ["Programados no mes", String((graficos as any).kpis.programadosNoMes)],
+          ["Nao programados no mes", String((graficos as any).kpis.naoProgramadosNoMes)],
+          ["Percentual programados", `${(payload as any).graficos.kpis.percentualProgramados}%`],
+        ]),
+        new Paragraph({ text: "" }),
+
+        new Paragraph({ text: "3. Vistorias Rotineiras no Periodo", heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: "3.1 Rodovias Pavimentadas", heading: HeadingLevel.HEADING_2 }),
+        this.tabela2Colunas([
+          ["Trechos (linhas)", String(pav.length)],
+          ["Trechos unicos", String(new Set(pav.map((t) => t.trecho)).size)],
+          ["Extensao total (km)", this.formatarNumero(pavKm, 2)],
+          ["Graficos workbook (total)", String((workbookPavRaw as WorkbookGrafico[]).length)],
+          ["Abas com grafico", String(new Set((workbookPavRaw as WorkbookGrafico[]).map((g) => g.aba)).size)],
+        ]),
+        new Paragraph({ text: "" }),
+
+        new Paragraph({ text: "3.2 Rodovias Nao Pavimentadas", heading: HeadingLevel.HEADING_2 }),
+        this.tabela2Colunas([
+          ["Trechos (linhas)", String(naoPav.length)],
+          ["Trechos unicos", String(new Set(naoPav.map((t) => t.trecho)).size)],
+          ["Extensao total (km)", this.formatarNumero(naoPavKm, 2)],
+          ["Graficos workbook (total)", String((workbookNaoPavRaw as WorkbookGrafico[]).length)],
+          ["Abas com grafico", String(new Set((workbookNaoPavRaw as WorkbookGrafico[]).map((g) => g.aba)).size)],
+        ]),
+        new Paragraph({ text: "" }),
+
+        new Paragraph({ text: "4. Controle de Importacoes e Inconsistencias", heading: HeadingLevel.HEADING_1 }),
+        this.tabela2Colunas([
+          ["Total de importacoes", String((inconsistencias as any).resumo.totalImportacoes)],
+          ["Importacoes com erro", String((inconsistencias as any).resumo.importacoesComErro)],
+          ["Total de erros", String((inconsistencias as any).resumo.totalErros)],
+          ["Ultima importacao", this.formatarDataHora(importacoes[0]?.finalizadoEm ?? importacoes[0]?.iniciadoEm)],
+        ]),
+      ];
+
+      children.push(new Paragraph({ text: "" }));
+      children.push(new Paragraph({ text: "5. Graficos do Workbook", heading: HeadingLevel.HEADING_1 }));
+      children.push(
+        new Paragraph(
+          "Para padronizacao da emissao automatica, esta secao inclui o primeiro grafico de cada aba (incluindo TT), mantendo os valores e percentuais extraidos do workbook.",
+        ),
+      );
+
+      children.push(new Paragraph({ text: "" }));
+      children.push(new Paragraph({ text: "5.1 Rodovias Pavimentadas", heading: HeadingLevel.HEADING_2 }));
+      for (const g of workbookPav) {
+        const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
+        children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
+        children.push(
+          new Paragraph({
+            children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
+          }),
+        );
+      }
+
+      children.push(new Paragraph({ text: "" }));
+      children.push(new Paragraph({ text: "5.2 Rodovias Nao Pavimentadas", heading: HeadingLevel.HEADING_2 }));
+      for (const g of workbookNaoPav) {
+        const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
+        children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
+        children.push(
+          new Paragraph({
+            children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
+          }),
+        );
+      }
+
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+      children.push(new Paragraph({ text: "6. Conclusoes Automaticas", heading: HeadingLevel.HEADING_1 }));
+      for (const obs of (payload as any).observacoesAutomaticas as string[]) {
+        children.push(new Paragraph({ text: obs, bullet: { level: 0 } }));
+      }
+
+      const doc = new Document({ sections: [{ children }] });
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relatorio_regiao_${this.regiao}_${this.competencia()}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      this.erro = e instanceof Error ? e.message : String(e);
+    }
   }
 
   async baixarMarkdownConsolidado(): Promise<void> {
