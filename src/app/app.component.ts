@@ -1063,9 +1063,15 @@ export class AppComponent implements OnInit {
     return this.dataUrlParaBytes(canvas.toDataURL("image/png"));
   }
 
-  private selecionarPrimeiroGraficoPorAba(graficos: WorkbookGrafico[]): WorkbookGrafico[] {
+  private selecionarPrimeiroGraficoPorTitulo(graficos: WorkbookGrafico[]): WorkbookGrafico[] {
     const ordenados = [...graficos].sort((a, b) => {
-      if (a.aba === b.aba) return a.ordem - b.ordem;
+      if (a.titulo === b.titulo) {
+        if (a.aba === b.aba) return a.ordem - b.ordem;
+      }
+
+      if (a.aba === "TT" && b.aba !== "TT") return -1;
+      if (b.aba === "TT" && a.aba !== "TT") return 1;
+
       const na = Number(a.aba);
       const nb = Number(b.aba);
       if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
@@ -1074,11 +1080,12 @@ export class AppComponent implements OnInit {
       return a.aba.localeCompare(b.aba, "pt-BR");
     });
 
-    const porAba = new Map<string, WorkbookGrafico>();
+    const porTitulo = new Map<string, WorkbookGrafico>();
     for (const g of ordenados) {
-      if (!porAba.has(g.aba)) porAba.set(g.aba, g);
+      const titulo = g.titulo.trim().toUpperCase();
+      if (!porTitulo.has(titulo)) porTitulo.set(titulo, g);
     }
-    return Array.from(porAba.values());
+    return Array.from(porTitulo.values()).sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR"));
   }
 
   private tabela2Colunas(linhas: Array<[string, string]>): Table {
@@ -1146,8 +1153,8 @@ export class AppComponent implements OnInit {
       const pavKm = pav.reduce((acc, t) => acc + (t.extKm ?? 0), 0);
       const naoPavKm = naoPav.reduce((acc, t) => acc + (t.extKm ?? 0), 0);
 
-      const workbookPav = this.selecionarPrimeiroGraficoPorAba(workbookPavRaw as WorkbookGrafico[]);
-      const workbookNaoPav = this.selecionarPrimeiroGraficoPorAba(workbookNaoPavRaw as WorkbookGrafico[]);
+      const workbookPav = this.selecionarPrimeiroGraficoPorTitulo(workbookPavRaw as WorkbookGrafico[]);
+      const workbookNaoPav = this.selecionarPrimeiroGraficoPorTitulo(workbookNaoPavRaw as WorkbookGrafico[]);
 
       const children: Array<Paragraph | Table> = [
         new Paragraph({
@@ -1231,32 +1238,48 @@ export class AppComponent implements OnInit {
       children.push(new Paragraph({ text: "5. Graficos do Workbook", heading: HeadingLevel.HEADING_1 }));
       children.push(
         new Paragraph(
-          "Para padronizacao da emissao automatica, esta secao inclui o primeiro grafico de cada aba (incluindo TT), mantendo os valores e percentuais extraidos do workbook.",
+          "Para padronizacao da emissao automatica, esta secao inclui o primeiro grafico de cada titulo no workbook (priorizando a aba TT quando existente), mantendo os valores e percentuais extraidos.",
         ),
       );
 
       children.push(new Paragraph({ text: "" }));
       children.push(new Paragraph({ text: "5.1 Rodovias Pavimentadas", heading: HeadingLevel.HEADING_2 }));
-      for (const g of workbookPav) {
-        const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
-        children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
+      if (workbookPav.length === 0) {
         children.push(
-          new Paragraph({
-            children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
-          }),
+          new Paragraph(
+            "Nenhum grafico de workbook foi encontrado para Rodovias Pavimentadas nesta competencia. Verifique se a importacao complementar PAV foi executada.",
+          ),
         );
+      } else {
+        for (const g of workbookPav) {
+          const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
+          children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
+          children.push(
+            new Paragraph({
+              children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
+            }),
+          );
+        }
       }
 
       children.push(new Paragraph({ text: "" }));
       children.push(new Paragraph({ text: "5.2 Rodovias Nao Pavimentadas", heading: HeadingLevel.HEADING_2 }));
-      for (const g of workbookNaoPav) {
-        const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
-        children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
+      if (workbookNaoPav.length === 0) {
         children.push(
-          new Paragraph({
-            children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
-          }),
+          new Paragraph(
+            "Nenhum grafico de workbook foi encontrado para Rodovias Nao Pavimentadas nesta competencia. Verifique se a importacao complementar NAO_PAV foi executada.",
+          ),
         );
+      } else {
+        for (const g of workbookNaoPav) {
+          const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
+          children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
+          children.push(
+            new Paragraph({
+              children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
+            }),
+          );
+        }
       }
 
       children.push(new Paragraph({ children: [new PageBreak()] }));
