@@ -1160,8 +1160,10 @@ export class AppComponent implements OnInit {
       const pavKm = pav.reduce((acc, t) => acc + (t.extKm ?? 0), 0);
       const naoPavKm = naoPav.reduce((acc, t) => acc + (t.extKm ?? 0), 0);
 
-      const workbookPav = this.selecionarPrimeiroGraficoPorTitulo(workbookPavRaw as WorkbookGrafico[]);
-      const workbookNaoPav = this.selecionarPrimeiroGraficoPorTitulo(workbookNaoPavRaw as WorkbookGrafico[]);
+      const workbookPav = workbookPavRaw as WorkbookGrafico[];
+      const workbookNaoPav = workbookNaoPavRaw as WorkbookGrafico[];
+      const titulosUnicosPav = new Set((workbookPavRaw as WorkbookGrafico[]).map((g) => g.titulo.trim().toUpperCase())).size;
+      const titulosUnicosNaoPav = new Set((workbookNaoPavRaw as WorkbookGrafico[]).map((g) => g.titulo.trim().toUpperCase())).size;
 
       const children: Array<Paragraph | Table> = [
         new Paragraph({
@@ -1245,8 +1247,18 @@ export class AppComponent implements OnInit {
       children.push(new Paragraph({ text: "5. Graficos do Workbook", heading: HeadingLevel.HEADING_1 }));
       children.push(
         new Paragraph(
-          "Para padronizacao da emissao automatica, esta secao inclui um grafico por titulo no workbook, priorizando a aba TT (consolidada) quando existir, mantendo os valores e percentuais extraidos.",
+          "Para padronizacao da emissao automatica, esta secao inclui todos os graficos extraidos do workbook, mantendo os valores e percentuais por aba.",
         ),
+      );
+      children.push(
+        this.tabela2Colunas([
+          ["PAV - graficos brutos", String((workbookPavRaw as WorkbookGrafico[]).length)],
+          ["PAV - titulos unicos", String(titulosUnicosPav)],
+          ["PAV - graficos inseridos", String(workbookPav.length)],
+          ["NAO_PAV - graficos brutos", String((workbookNaoPavRaw as WorkbookGrafico[]).length)],
+          ["NAO_PAV - titulos unicos", String(titulosUnicosNaoPav)],
+          ["NAO_PAV - graficos inseridos", String(workbookNaoPav.length)],
+        ]),
       );
 
       children.push(new Paragraph({ text: "" }));
@@ -1260,7 +1272,7 @@ export class AppComponent implements OnInit {
       } else {
         for (const g of workbookPav) {
           const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
-          children.push(new Paragraph({ text: g.titulo, heading: HeadingLevel.HEADING_3 }));
+          children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
           children.push(
             new Paragraph({
               children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
@@ -1280,7 +1292,7 @@ export class AppComponent implements OnInit {
       } else {
         for (const g of workbookNaoPav) {
           const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
-          children.push(new Paragraph({ text: g.titulo, heading: HeadingLevel.HEADING_3 }));
+          children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
           children.push(
             new Paragraph({
               children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
