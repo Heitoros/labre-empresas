@@ -1064,11 +1064,8 @@ export class AppComponent implements OnInit {
   }
 
   private selecionarPrimeiroGraficoPorTitulo(graficos: WorkbookGrafico[]): WorkbookGrafico[] {
-    const ordenados = [...graficos].sort((a, b) => {
-      if (a.titulo === b.titulo) {
-        if (a.aba === b.aba) return a.ordem - b.ordem;
-      }
-
+    const ordenarAba = (a: WorkbookGrafico, b: WorkbookGrafico): number => {
+      if (a.aba === b.aba) return a.ordem - b.ordem;
       if (a.aba === "TT" && b.aba !== "TT") return 1;
       if (b.aba === "TT" && a.aba !== "TT") return -1;
 
@@ -1078,14 +1075,24 @@ export class AppComponent implements OnInit {
       if (Number.isFinite(na)) return -1;
       if (Number.isFinite(nb)) return 1;
       return a.aba.localeCompare(b.aba, "pt-BR");
-    });
+    };
 
-    const porTitulo = new Map<string, WorkbookGrafico>();
-    for (const g of ordenados) {
+    const porTitulo = new Map<string, WorkbookGrafico[]>();
+    for (const g of graficos) {
       const titulo = g.titulo.trim().toUpperCase();
-      if (!porTitulo.has(titulo)) porTitulo.set(titulo, g);
+      const lista = porTitulo.get(titulo) ?? [];
+      lista.push(g);
+      porTitulo.set(titulo, lista);
     }
-    return Array.from(porTitulo.values()).sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR"));
+
+    const selecionados: WorkbookGrafico[] = [];
+    for (const lista of porTitulo.values()) {
+      const ordenada = [...lista].sort(ordenarAba);
+      const preferido = ordenada.find((g) => g.aba !== "TT") ?? ordenada[0];
+      if (preferido) selecionados.push(preferido);
+    }
+
+    return selecionados.sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR"));
   }
 
   private tabela2Colunas(linhas: Array<[string, string]>): Table {
