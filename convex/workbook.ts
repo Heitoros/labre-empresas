@@ -59,6 +59,39 @@ function getColumnIndex(headers: string[], aliases: string[]): number {
   return canon.findIndex((h) => aliasCanon.includes(h));
 }
 
+function decodeXmlText(text: string): string {
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .trim();
+}
+
+function extractPtValues(xmlBlock: string): string[] {
+  const indexed: Array<{ idx: number; value: string }> = [];
+  const loose: string[] = [];
+
+  for (const m of xmlBlock.matchAll(/<c:pt\b([^>]*)>[\s\S]*?<c:v>([\s\S]*?)<\/c:v>[\s\S]*?<\/c:pt>/g)) {
+    const attrs = m[1] ?? "";
+    const value = decodeXmlText(m[2] ?? "");
+    const idxRaw = attrs.match(/\bidx="(\d+)"/)?.[1];
+    if (idxRaw !== undefined) {
+      indexed.push({ idx: Number(idxRaw), value });
+    } else {
+      loose.push(value);
+    }
+  }
+
+  if (!indexed.length) return loose;
+
+  const maxIdx = indexed.reduce((acc, cur) => Math.max(acc, cur.idx), 0);
+  const ordered = new Array<string>(maxIdx + 1).fill("");
+  for (const item of indexed) ordered[item.idx] = item.value;
+  return ordered.filter((v) => v !== "");
+}
+
 async function parseCharts(bytes: Uint8Array) {
   const zip = await JSZip.loadAsync(bytes);
   const wbXml = await zip.file("xl/workbook.xml")?.async("string");
@@ -122,15 +155,28 @@ async function parseCharts(bytes: Uint8Array) {
         const chartXml = await zip.file(chartPath)?.async("string");
         if (!chartXml) continue;
 
-        const title = [...chartXml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)].map((m) => m[1].trim()).join(" ") || "Grafico";
+        const title = [...chartXml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)].map((m) => decodeXmlText(m[1])).join(" ") || "Grafico";
         const type = chartXml.match(/<c:(pieChart|pie3DChart|doughnutChart|barChart|lineChart|areaChart|radarChart)\b/)?.[1] ?? "unknown";
 
-        const labels = [...chartXml.matchAll(/<c:strCache>[\s\S]*?<c:pt[^>]*>[\s\S]*?<c:v>([\s\S]*?)<\/c:v>/g)].map(
-          (m) => m[1].trim(),
-        );
-        const values = [...chartXml.matchAll(/<c:val>[\s\S]*?<c:numCache>[\s\S]*?<c:pt[^>]*>[\s\S]*?<c:v>([\s\S]*?)<\/c:v>/g)].map(
-          (m) => toNumber(m[1]),
-        );
+        const seriesBlocks = [...chartXml.matchAll(/<c:ser\b[\s\S]*?<\/c:ser>/g)].map((m) => m[0]);
+        let labels: string[] = [];
+        let values: number[] = [];
+
+        for (const ser of seriesBlocks) {
+          const catBlock = ser.match(/<c:cat\b[\s\S]*?<\/c:cat>/)?.[0];
+          const catStrCache = catBlock?.match(/<c:strCache\b[\s\S]*?<\/c:strCache>/)?.[0];
+          const catNumCache = ser.match(/<c:cat\b[\s\S]*?<c:numCache\b[\s\S]*?<\/c:numCache>[\s\S]*?<\/c:cat>/)?.[0];
+          const valNumCache = ser.match(/<c:val\b[\s\S]*?<c:numCache\b[\s\S]*?<\/c:numCache>[\s\S]*?<\/c:val>/)?.[0];
+
+          const labelsSer = catStrCache ? extractPtValues(catStrCache) : catNumCache ? extractPtValues(catNumCache) : [];
+          const valuesSer = valNumCache ? extractPtValues(valNumCache).map((v) => toNumber(v)) : [];
+
+          if (valuesSer.length > values.length) {
+            values = valuesSer;
+            labels = labelsSer;
+          }
+        }
+
         if (!values.length) continue;
 
         charts.push({
