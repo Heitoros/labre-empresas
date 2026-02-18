@@ -1088,7 +1088,7 @@ export class AppComponent implements OnInit {
     const selecionados: WorkbookGrafico[] = [];
     for (const lista of porTitulo.values()) {
       const ordenada = [...lista].sort(ordenarAba);
-      const preferido = ordenada.find((g) => g.aba !== "TT") ?? ordenada[0];
+      const preferido = ordenada.find((g) => g.aba === "TT") ?? ordenada[0];
       if (preferido) selecionados.push(preferido);
     }
 
@@ -1245,7 +1245,7 @@ export class AppComponent implements OnInit {
       children.push(new Paragraph({ text: "5. Graficos do Workbook", heading: HeadingLevel.HEADING_1 }));
       children.push(
         new Paragraph(
-          "Para padronizacao da emissao automatica, esta secao inclui o primeiro grafico de cada titulo no workbook (priorizando as abas numericas e usando TT como fallback), mantendo os valores e percentuais extraidos.",
+          "Para padronizacao da emissao automatica, esta secao inclui um grafico por titulo no workbook, priorizando a aba TT (consolidada) quando existir, mantendo os valores e percentuais extraidos.",
         ),
       );
 
@@ -1260,7 +1260,7 @@ export class AppComponent implements OnInit {
       } else {
         for (const g of workbookPav) {
           const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
-          children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
+          children.push(new Paragraph({ text: g.titulo, heading: HeadingLevel.HEADING_3 }));
           children.push(
             new Paragraph({
               children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
@@ -1280,7 +1280,7 @@ export class AppComponent implements OnInit {
       } else {
         for (const g of workbookNaoPav) {
           const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
-          children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
+          children.push(new Paragraph({ text: g.titulo, heading: HeadingLevel.HEADING_3 }));
           children.push(
             new Paragraph({
               children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
