@@ -188,7 +188,15 @@
       <div class="pie-wrap" *ngIf="abaGraficos === 'tipoFonte'">
         <div class="pie-shell">
           <div class="pie" [style.background]="estiloPizzaConica(dadosPizzaTipoFonte())"></div>
-          <span class="pie-label" *ngFor="let r of rotulosPizzaTipoFonte()" [style.left]="r.left" [style.top]="r.top">{{ r.texto }}</span>
+          <span
+            class="pie-label"
+            [class.pie-label-right]="r.align === 'right'"
+            [class.pie-label-left]="r.align === 'left'"
+            *ngFor="let r of rotulosPizzaTipoFonte()"
+            [style.left]="r.left"
+            [style.top]="r.top"
+            >{{ r.texto }}</span
+          >
         </div>
         <div class="pie-legend">
           <p *ngFor="let item of dadosPizzaTipoFonte()">
@@ -201,7 +209,15 @@
       <div class="pie-wrap" *ngIf="abaGraficos === 'programacao'">
         <div class="pie-shell">
           <div class="pie" [style.background]="estiloPizzaConica(dadosPizzaProgramacao())"></div>
-          <span class="pie-label" *ngFor="let r of rotulosPizzaProgramacao()" [style.left]="r.left" [style.top]="r.top">{{ r.texto }}</span>
+          <span
+            class="pie-label"
+            [class.pie-label-right]="r.align === 'right'"
+            [class.pie-label-left]="r.align === 'left'"
+            *ngFor="let r of rotulosPizzaProgramacao()"
+            [style.left]="r.left"
+            [style.top]="r.top"
+            >{{ r.texto }}</span
+          >
         </div>
         <div class="pie-legend">
           <p *ngFor="let item of dadosPizzaProgramacao()">
@@ -238,7 +254,15 @@
           <div class="pie-wrap">
             <div class="pie-shell">
               <div class="pie" [style.background]="estiloPizzaWorkbook(g)"></div>
-              <span class="pie-label" *ngFor="let r of rotulosPizzaWorkbook(g)" [style.left]="r.left" [style.top]="r.top">{{ r.texto }}</span>
+              <span
+                class="pie-label"
+                [class.pie-label-right]="r.align === 'right'"
+                [class.pie-label-left]="r.align === 'left'"
+                *ngFor="let r of rotulosPizzaWorkbook(g)"
+                [style.left]="r.left"
+                [style.top]="r.top"
+                >{{ r.texto }}</span
+              >
             </div>
             <div class="pie-legend">
               <p *ngFor="let s of g.series; let i = index">
@@ -333,7 +357,7 @@
       </div>
     </section>
 
-    <section class="card full-width">
+    <section class="card full-width" *ngIf="sessaoAtual?.usuario?.perfil === 'ADMIN'">
       <h2>Painel de Jobs e Auditoria</h2>
       <div class="health-strip" *ngIf="saudeOperacional">
         <span>Ultimas {{ saudeOperacional.periodoHoras }}h:</span>

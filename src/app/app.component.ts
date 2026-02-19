@@ -716,6 +716,7 @@ export class AppComponent implements OnInit {
     this.loading = true;
     this.erro = "";
     try {
+      const isAdmin = this.sessaoAtual?.usuario?.perfil === "ADMIN";
       const [graficos, inconsistencias, auditoria, saude, evolucao] = await Promise.all([
         this.client.query(api.trechos.obterGraficosCompetencia, {
           regiao: this.regiao,
@@ -727,13 +728,17 @@ export class AppComponent implements OnInit {
           ano: this.ano,
           mes: this.mes,
         }),
-        this.client.query(api.trechos.listarAuditoriaRecente, {
-          sessionToken: this.tokenSessao(),
-          limite: 30,
-        }),
-        this.client.query(api.trechos.obterSaudeOperacional, {
-          sessionToken: this.tokenSessao(),
-        }),
+        isAdmin
+          ? this.client.query(api.trechos.listarAuditoriaRecente, {
+              sessionToken: this.tokenSessao(),
+              limite: 30,
+            })
+          : Promise.resolve([]),
+        isAdmin
+          ? this.client.query(api.trechos.obterSaudeOperacional, {
+              sessionToken: this.tokenSessao(),
+            })
+          : Promise.resolve(null),
         this.client.query(api.trechos.obterEvolucaoManutencao, {
           regiao: this.regiao,
           ano: this.ano,
@@ -752,8 +757,8 @@ export class AppComponent implements OnInit {
       this.importacoes = inconsistencias.importacoes as ImportacaoResumo[];
       this.porCodigoInconsistencia = inconsistencias.porCodigo as CodigoInconsistenciaResumo[];
       this.resumoInconsistencias = inconsistencias.resumo;
-      this.auditoriaRecente = auditoria as AuditoriaEvento[];
-      this.saudeOperacional = saude as SaudeOperacional;
+      this.auditoriaRecente = (auditoria as AuditoriaEvento[]) ?? [];
+      this.saudeOperacional = (saude as SaudeOperacional | null) ?? null;
       const evolucaoPayload = evolucao as {
         trechoSelecionado: string;
         trechosDisponiveis: string[];
@@ -912,13 +917,15 @@ export class AppComponent implements OnInit {
     return `conic-gradient(${slices || "#e2e8f0 0deg 360deg"})`;
   }
 
-  rotulosPizza(data: Array<{ valor: number; percentual: number }>): Array<{ texto: string; left: string; top: string }> {
-    const radius = 31;
+  rotulosPizza(
+    data: Array<{ valor: number; percentual: number }>,
+  ): Array<{ texto: string; left: string; top: string; align: "left" | "right" }> {
+    const radius = 36;
     const cx = 50;
     const cy = 50;
     let angulo = -90;
 
-    return data
+    const base = data
       .filter((item) => item.percentual > 0)
       .map((item) => {
         const span = (item.percentual / 100) * 360;
@@ -929,21 +936,55 @@ export class AppComponent implements OnInit {
         angulo += span;
         return {
           texto: `${this.formatarNumero(item.valor, 1)} | ${this.formatarNumero(item.percentual, 1)}%`,
-          left: `${x}%`,
-          top: `${y}%`,
+          x,
+          y,
+          align: x >= cx ? ("right" as const) : ("left" as const),
         };
       });
+
+    const ajustarLado = (lado: "left" | "right") => {
+      const itens = base.filter((item) => item.align === lado).sort((a, b) => a.y - b.y);
+      const minGap = 8;
+      const minY = 10;
+      const maxY = 90;
+
+      for (let i = 0; i < itens.length; i += 1) {
+        if (i > 0 && itens[i].y - itens[i - 1].y < minGap) {
+          itens[i].y = itens[i - 1].y + minGap;
+        }
+      }
+      for (let i = itens.length - 1; i >= 0; i -= 1) {
+        if (itens[i].y > maxY) itens[i].y = maxY;
+        if (i > 0 && itens[i].y - itens[i - 1].y < minGap) {
+          itens[i - 1].y = itens[i].y - minGap;
+        }
+      }
+      for (const item of itens) {
+        if (item.y < minY) item.y = minY;
+        if (item.y > maxY) item.y = maxY;
+      }
+    };
+
+    ajustarLado("left");
+    ajustarLado("right");
+
+    return base.map((item) => ({
+      texto: item.texto,
+      left: `${item.x}%`,
+      top: `${item.y}%`,
+      align: item.align,
+    }));
   }
 
-  rotulosPizzaTipoFonte(): Array<{ texto: string; left: string; top: string }> {
+  rotulosPizzaTipoFonte(): Array<{ texto: string; left: string; top: string; align: "left" | "right" }> {
     return this.rotulosPizza(this.dadosPizzaTipoFonte());
   }
 
-  rotulosPizzaProgramacao(): Array<{ texto: string; left: string; top: string }> {
+  rotulosPizzaProgramacao(): Array<{ texto: string; left: string; top: string; align: "left" | "right" }> {
     return this.rotulosPizza(this.dadosPizzaProgramacao());
   }
 
-  rotulosPizzaWorkbook(grafico: WorkbookGrafico): Array<{ texto: string; left: string; top: string }> {
+  rotulosPizzaWorkbook(grafico: WorkbookGrafico): Array<{ texto: string; left: string; top: string; align: "left" | "right" }> {
     return this.rotulosPizza(grafico.series.map((s) => ({ valor: s.valor, percentual: s.percentual })));
   }
 
@@ -1131,16 +1172,19 @@ export class AppComponent implements OnInit {
     ctx.fillText(titulo.slice(0, 82), 30, 42);
 
     const total = series.reduce((acc, s) => acc + (s.valor ?? 0), 0);
-    const cx = 270;
-    const cy = 300;
-    const radius = 170;
+    const cx = 250;
+    const cy = 295;
+    const radius = 165;
     let current = -Math.PI / 2;
+
+    const labels: Array<{ texto: string; x: number; y: number; align: "left" | "right" }> = [];
 
     for (let i = 0; i < series.length; i += 1) {
       const s = series[i];
       const percentual = total > 0 ? (s.valor / total) * 100 : s.percentual;
       const angle = (percentual / 100) * Math.PI * 2;
       const color = this.paletteWorkbook[i % this.paletteWorkbook.length];
+      const middle = current + angle / 2;
 
       ctx.beginPath();
       ctx.moveTo(cx, cy);
@@ -1148,19 +1192,78 @@ export class AppComponent implements OnInit {
       ctx.closePath();
       ctx.fillStyle = color;
       ctx.fill();
+
+      if (percentual > 0) {
+        const lx = cx + Math.cos(middle) * (radius * 0.82);
+        const ly = cy + Math.sin(middle) * (radius * 0.82);
+        labels.push({
+          texto: `${this.formatarNumero(s.valor, 1)} | ${this.formatarNumero(s.percentual, 1)}%`,
+          x: lx,
+          y: ly,
+          align: lx >= cx ? "right" : "left",
+        });
+      }
+
       current += angle;
     }
 
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(cx, cy, 70, 0, Math.PI * 2);
-    ctx.fill();
+    const ajustarLado = (lado: "left" | "right") => {
+      const itens = labels.filter((l) => l.align === lado).sort((a, b) => a.y - b.y);
+      const minGap = 24;
+      const minY = 88;
+      const maxY = 520;
 
-    ctx.fillStyle = "#334e68";
-    ctx.font = "bold 18px DM Sans, Segoe UI, sans-serif";
-    ctx.fillText("Total", cx - 24, cy - 6);
-    ctx.font = "bold 20px DM Sans, Segoe UI, sans-serif";
-    ctx.fillText(this.formatarNumero(total, 2), cx - 42, cy + 20);
+      for (let i = 0; i < itens.length; i += 1) {
+        if (i > 0 && itens[i].y - itens[i - 1].y < minGap) {
+          itens[i].y = itens[i - 1].y + minGap;
+        }
+      }
+      for (let i = itens.length - 1; i >= 0; i -= 1) {
+        if (itens[i].y > maxY) itens[i].y = maxY;
+        if (i > 0 && itens[i].y - itens[i - 1].y < minGap) {
+          itens[i - 1].y = itens[i].y - minGap;
+        }
+      }
+      for (const item of itens) {
+        if (item.y < minY) item.y = minY;
+      }
+    };
+
+    ajustarLado("left");
+    ajustarLado("right");
+
+    const drawRoundRect = (x: number, y: number, w: number, h: number, r: number) => {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    };
+
+    ctx.font = "bold 13px DM Sans, Segoe UI, sans-serif";
+    for (const label of labels) {
+      const textWidth = ctx.measureText(label.texto).width;
+      const boxW = textWidth + 10;
+      const boxH = 20;
+      const boxX = label.align === "right" ? label.x + 4 : label.x - boxW - 4;
+      const boxY = label.y - boxH / 2;
+
+      drawRoundRect(boxX, boxY, boxW, boxH, 6);
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.fill();
+      ctx.strokeStyle = "#d1d5db";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = "#102a43";
+      ctx.fillText(label.texto, boxX + 5, boxY + 14);
+    }
 
     let y = 110;
     for (let i = 0; i < series.length; i += 1) {
@@ -1171,7 +1274,7 @@ export class AppComponent implements OnInit {
       ctx.fillRect(520, y - 12, 18, 18);
       ctx.fillStyle = "#102a43";
       ctx.font = "16px DM Sans, Segoe UI, sans-serif";
-      const linha = `${s.label}: ${this.formatarNumero(s.valor, 2)} (${this.formatarNumero(s.percentual, 1)}%)`;
+      const linha = `${s.label}`;
       ctx.fillText(linha.slice(0, 60), 548, y + 2);
       y += 28;
       if (y > 520) break;
