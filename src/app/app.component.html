@@ -96,19 +96,6 @@
         </select>
       </label>
 
-      <label>
-        Tipo de fonte
-        <select [(ngModel)]="uploadTipoFonte" name="uploadTipoFonte">
-          <option [ngValue]="'PAV'">PAV</option>
-          <option [ngValue]="'NAO_PAV'">NAO_PAV</option>
-        </select>
-      </label>
-
-      <label>
-        Planilha (.xlsx)
-        <input type="file" accept=".xlsx" (change)="onArquivoSelecionado($event)" />
-      </label>
-
       <label class="check-inline">
         <input type="checkbox" [(ngModel)]="uploadLimparAntes" name="uploadLimparAntes" />
         Limpar dados atuais da competencia/tipo antes de importar
@@ -118,10 +105,6 @@
         <input type="checkbox" [(ngModel)]="uploadProcessarComplementar" name="uploadProcessarComplementar" />
         Processar TT e graficos de avaliacao por trecho do workbook
       </label>
-
-      <button type="button" [disabled]="uploadEmAndamento" (click)="importarArquivoSelecionado()">
-        {{ uploadEmAndamento ? "Importando..." : "Importar agora" }}
-      </button>
     </div>
 
     <div class="upload-grid lote-grid">
