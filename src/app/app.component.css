@@ -222,7 +222,6 @@ h2 {
 
 .pie-label {
   position: absolute;
-  transform: translate(-50%, -50%);
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid #d8dee4;
   border-radius: 6px;
@@ -231,6 +230,14 @@ h2 {
   font-weight: 700;
   color: #102a43;
   white-space: nowrap;
+}
+
+.pie-label-right {
+  transform: translate(2px, -50%);
+}
+
+.pie-label-left {
+  transform: translate(calc(-100% - 2px), -50%);
 }
 
 .pie-legend p {
