@@ -250,6 +250,39 @@ export class AppComponent implements OnInit {
     return true;
   }
 
+  private mensagemErroAuthAmigavel(e: unknown, contexto: "LOGIN" | "TROCA_SENHA" | "GERAL" = "GERAL"): string {
+    const msg = e instanceof Error ? e.message : String(e);
+    const m = msg.toLowerCase();
+
+    if (m.includes("usuario ou senha invalido") || m.includes("usuário ou senha inválido")) {
+      return "Email ou senha invalidos. Confira os dados e tente novamente.";
+    }
+
+    if (m.includes("senha atual incorreta")) {
+      return "Senha atual incorreta. Tente novamente.";
+    }
+
+    if (m.includes("sessao invalida") || m.includes("sessão inválida") || m.includes("sessao expirada")) {
+      return "Sua sessao expirou. Faca login novamente.";
+    }
+
+    if (m.includes("a senha deve")) {
+      return msg;
+    }
+
+    if (m.includes("server error") || m.includes("[request id:")) {
+      if (contexto === "LOGIN") {
+        return "Nao foi possivel concluir o login agora. Verifique email/senha e tente novamente.";
+      }
+      if (contexto === "TROCA_SENHA") {
+        return "Nao foi possivel salvar a nova senha agora. Confira a senha atual e tente novamente.";
+      }
+      return "Ocorreu um erro temporario no servidor. Tente novamente em instantes.";
+    }
+
+    return msg;
+  }
+
   async login(): Promise<void> {
     this.authMensagem = "";
     try {
@@ -271,7 +304,7 @@ export class AppComponent implements OnInit {
         this.authMensagem = "Troca de senha obrigatoria no primeiro acesso.";
       }
     } catch (e) {
-      this.authMensagem = e instanceof Error ? e.message : String(e);
+      this.authMensagem = this.mensagemErroAuthAmigavel(e, "LOGIN");
     }
   }
 
@@ -446,7 +479,7 @@ export class AppComponent implements OnInit {
       await this.recarregar();
     } catch (e) {
       if (await this.tratarErroAutenticacao(e)) return;
-      this.authMensagem = e instanceof Error ? e.message : String(e);
+      this.authMensagem = this.mensagemErroAuthAmigavel(e, "TROCA_SENHA");
     }
   }
 
