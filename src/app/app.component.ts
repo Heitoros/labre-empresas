@@ -1156,8 +1156,8 @@ export class AppComponent implements OnInit {
   }
 
   private async renderizarPizzaWorkbook(titulo: string, series: WorkbookSerie[]): Promise<Uint8Array> {
-    const width = 980;
-    const height = 560;
+    const width = 620;
+    const height = 395;
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -1168,13 +1168,13 @@ export class AppComponent implements OnInit {
     ctx.fillRect(0, 0, width, height);
 
     ctx.fillStyle = "#1f2933";
-    ctx.font = "bold 24px DM Sans, Segoe UI, sans-serif";
-    ctx.fillText(titulo.slice(0, 82), 30, 42);
+    ctx.font = "bold 18px DM Sans, Segoe UI, sans-serif";
+    ctx.fillText(titulo.slice(0, 64), 20, 30);
 
     const total = series.reduce((acc, s) => acc + (s.valor ?? 0), 0);
-    const cx = 250;
-    const cy = 295;
-    const radius = 165;
+    const cx = 165;
+    const cy = 220;
+    const radius = 130;
     let current = -Math.PI / 2;
 
     const labels: Array<{ texto: string; x: number; y: number; align: "left" | "right" }> = [];
@@ -1209,9 +1209,9 @@ export class AppComponent implements OnInit {
 
     const ajustarLado = (lado: "left" | "right") => {
       const itens = labels.filter((l) => l.align === lado).sort((a, b) => a.y - b.y);
-      const minGap = 24;
-      const minY = 88;
-      const maxY = 520;
+      const minGap = 18;
+      const minY = 56;
+      const maxY = 360;
 
       for (let i = 0; i < itens.length; i += 1) {
         if (i > 0 && itens[i].y - itens[i - 1].y < minGap) {
@@ -1246,11 +1246,11 @@ export class AppComponent implements OnInit {
       ctx.closePath();
     };
 
-    ctx.font = "bold 13px DM Sans, Segoe UI, sans-serif";
+    ctx.font = "bold 10px DM Sans, Segoe UI, sans-serif";
     for (const label of labels) {
       const textWidth = ctx.measureText(label.texto).width;
-      const boxW = textWidth + 10;
-      const boxH = 20;
+      const boxW = textWidth + 8;
+      const boxH = 16;
       const boxX = label.align === "right" ? label.x + 4 : label.x - boxW - 4;
       const boxY = label.y - boxH / 2;
 
@@ -1262,22 +1262,22 @@ export class AppComponent implements OnInit {
       ctx.stroke();
 
       ctx.fillStyle = "#102a43";
-      ctx.fillText(label.texto, boxX + 5, boxY + 14);
+      ctx.fillText(label.texto, boxX + 4, boxY + 11);
     }
 
-    let y = 110;
+    let y = 75;
     for (let i = 0; i < series.length; i += 1) {
       const s = series[i];
       const color = this.paletteWorkbook[i % this.paletteWorkbook.length];
 
       ctx.fillStyle = color;
-      ctx.fillRect(520, y - 12, 18, 18);
+      ctx.fillRect(355, y - 9, 12, 12);
       ctx.fillStyle = "#102a43";
-      ctx.font = "16px DM Sans, Segoe UI, sans-serif";
+      ctx.font = "12px DM Sans, Segoe UI, sans-serif";
       const linha = `${s.label}`;
-      ctx.fillText(linha.slice(0, 60), 548, y + 2);
-      y += 28;
-      if (y > 520) break;
+      ctx.fillText(linha.slice(0, 34), 374, y + 1);
+      y += 20;
+      if (y > 372) break;
     }
 
     return this.dataUrlParaBytes(canvas.toDataURL("image/png"));
