@@ -193,13 +193,36 @@ async function parseCharts(bytes: Uint8Array) {
   return charts;
 }
 
+function valorCelula(sheet: XLSX.WorkSheet | undefined, endereco: string): string {
+  if (!sheet) return "";
+  const cell = sheet[endereco];
+  return String(cell?.w ?? cell?.v ?? "").trim();
+}
+
+function resolverFormulaSimples(formula: string): { aba: string; celula: string } | null {
+  const limpa = formula.trim();
+  const m = limpa.match(/^'?([^'!]+)'?!\$?([A-Z]+)\$?(\d+)$/i);
+  if (!m) return null;
+  const aba = m[1].trim();
+  const celula = `${m[2].toUpperCase()}${m[3]}`;
+  return { aba, celula };
+}
+
 function extrairTrechoPorAba(workbook: XLSX.WorkBook): Record<string, string> {
   const trechoPorAba: Record<string, string> = {};
   for (const aba of workbook.SheetNames) {
     const sheet = workbook.Sheets[aba];
     if (!sheet) continue;
-    const cell = sheet["B3"];
-    const raw = String(cell?.w ?? cell?.v ?? "").trim();
+    const cell = sheet["B3"] as XLSX.CellObject | undefined;
+    let raw = valorCelula(sheet, "B3");
+
+    if (!raw && cell?.f) {
+      const ref = resolverFormulaSimples(cell.f);
+      if (ref) {
+        raw = valorCelula(workbook.Sheets[ref.aba], ref.celula);
+      }
+    }
+
     if (raw) trechoPorAba[aba] = raw;
   }
   return trechoPorAba;
