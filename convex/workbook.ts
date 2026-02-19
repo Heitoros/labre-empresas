@@ -193,6 +193,18 @@ async function parseCharts(bytes: Uint8Array) {
   return charts;
 }
 
+function extrairTrechoPorAba(workbook: XLSX.WorkBook): Record<string, string> {
+  const trechoPorAba: Record<string, string> = {};
+  for (const aba of workbook.SheetNames) {
+    const sheet = workbook.Sheets[aba];
+    if (!sheet) continue;
+    const cell = sheet["B3"];
+    const raw = String(cell?.w ?? cell?.v ?? "").trim();
+    if (raw) trechoPorAba[aba] = raw;
+  }
+  return trechoPorAba;
+}
+
 export const importarWorkbookComplementar = action({
   args: {
     sessionToken: v.string(),
@@ -261,7 +273,9 @@ export const importarWorkbookComplementar = action({
       }
     }
 
-    const charts = await parseCharts(bytes);
+    const chartsRaw = await parseCharts(bytes);
+    const trechoPorAba = extrairTrechoPorAba(workbook);
+    const charts = chartsRaw.map((c) => ({ ...c, trecho: trechoPorAba[c.aba] }));
 
     return (ctx as any).runMutation("workbook:persistirWorkbookComplementar", {
       regiao: args.regiao,
@@ -304,6 +318,7 @@ export const persistirWorkbookComplementar = mutation({
         aba: v.string(),
         titulo: v.string(),
         tipoGrafico: v.string(),
+        trecho: v.optional(v.string()),
         labels: v.array(v.string()),
         valores: v.array(v.number()),
       }),
@@ -363,6 +378,7 @@ export const persistirWorkbookComplementar = mutation({
         ordem: i + 1,
         titulo: c.titulo,
         tipoGrafico: c.tipoGrafico,
+        trecho: c.trecho,
         labels: c.labels,
         valores: c.valores,
         arquivoOrigem: args.arquivoOrigem,
@@ -465,6 +481,7 @@ export const listarGraficosWorkbook = query({
         ordem: g.ordem,
         titulo: g.titulo,
         tipoGrafico: g.tipoGrafico,
+        trecho: g.trecho ?? "Trecho nao informado",
         labels: g.labels,
         valores: g.valores,
         total,

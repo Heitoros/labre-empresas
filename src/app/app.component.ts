@@ -89,8 +89,15 @@ type WorkbookGrafico = {
   ordem: number;
   titulo: string;
   tipoGrafico: string;
+  trecho?: string;
   total: number;
   series: WorkbookSerie[];
+};
+type EvolucaoManutencaoItem = {
+  mes: number;
+  competencia: string;
+  geralKm: number;
+  trechoKm: number;
 };
 
 @Component({
@@ -158,8 +165,11 @@ export class AppComponent implements OnInit {
   };
   abaGraficos: "tipoFonte" | "programacao" = "tipoFonte";
   workbookTipoFonte: "PAV" | "NAO_PAV" = "PAV";
-  workbookAbaSelecionada = "";
+  workbookTrechoSelecionado = "";
   workbookGraficos: WorkbookGrafico[] = [];
+  evolucaoTrechosDisponiveis: string[] = [];
+  evolucaoTrechoSelecionado = "";
+  evolucaoMensal: EvolucaoManutencaoItem[] = [];
 
   meses = [
     { value: 1, label: "Janeiro" },
@@ -706,7 +716,7 @@ export class AppComponent implements OnInit {
     this.loading = true;
     this.erro = "";
     try {
-      const [graficos, inconsistencias, auditoria, saude] = await Promise.all([
+      const [graficos, inconsistencias, auditoria, saude, evolucao] = await Promise.all([
         this.client.query(api.trechos.obterGraficosCompetencia, {
           regiao: this.regiao,
           ano: this.ano,
@@ -724,6 +734,11 @@ export class AppComponent implements OnInit {
         this.client.query(api.trechos.obterSaudeOperacional, {
           sessionToken: this.tokenSessao(),
         }),
+        this.client.query(api.trechos.obterEvolucaoManutencao, {
+          regiao: this.regiao,
+          ano: this.ano,
+          trecho: this.evolucaoTrechoSelecionado || undefined,
+        }),
       ]);
 
       this.totalTrechos = graficos.kpis.totalTrechos;
@@ -739,6 +754,14 @@ export class AppComponent implements OnInit {
       this.resumoInconsistencias = inconsistencias.resumo;
       this.auditoriaRecente = auditoria as AuditoriaEvento[];
       this.saudeOperacional = saude as SaudeOperacional;
+      const evolucaoPayload = evolucao as {
+        trechoSelecionado: string;
+        trechosDisponiveis: string[];
+        mensal: EvolucaoManutencaoItem[];
+      };
+      this.evolucaoTrechosDisponiveis = evolucaoPayload.trechosDisponiveis;
+      this.evolucaoTrechoSelecionado = evolucaoPayload.trechoSelecionado;
+      this.evolucaoMensal = evolucaoPayload.mensal;
       await this.carregarUsuariosAdmin();
       await this.recarregarGraficosWorkbook();
     } catch (e) {
@@ -746,6 +769,29 @@ export class AppComponent implements OnInit {
       this.erro = e instanceof Error ? e.message : String(e);
     } finally {
       this.loading = false;
+    }
+  }
+
+  async recarregarEvolucaoManutencao(): Promise<void> {
+    if (!this.sessaoAtual?.token) return;
+    try {
+      const evolucao = (await this.client.query(api.trechos.obterEvolucaoManutencao, {
+        regiao: this.regiao,
+        ano: this.ano,
+        trecho: this.evolucaoTrechoSelecionado || undefined,
+      })) as {
+        trechoSelecionado: string;
+        trechosDisponiveis: string[];
+        mensal: EvolucaoManutencaoItem[];
+      };
+
+      this.evolucaoTrechosDisponiveis = evolucao.trechosDisponiveis;
+      this.evolucaoTrechoSelecionado = evolucao.trechoSelecionado;
+      this.evolucaoMensal = evolucao.mensal;
+    } catch (e) {
+      if (!(await this.tratarErroAutenticacao(e))) {
+        this.erro = e instanceof Error ? e.message : String(e);
+      }
     }
   }
 
@@ -866,23 +912,52 @@ export class AppComponent implements OnInit {
     return `conic-gradient(${slices || "#e2e8f0 0deg 360deg"})`;
   }
 
+  rotulosPizza(data: Array<{ valor: number; percentual: number }>): Array<{ texto: string; left: string; top: string }> {
+    const radius = 31;
+    const cx = 50;
+    const cy = 50;
+    let angulo = -90;
+
+    return data
+      .filter((item) => item.percentual > 0)
+      .map((item) => {
+        const span = (item.percentual / 100) * 360;
+        const meio = angulo + span / 2;
+        const rad = (meio * Math.PI) / 180;
+        const x = cx + radius * Math.cos(rad);
+        const y = cy + radius * Math.sin(rad);
+        angulo += span;
+        return {
+          texto: `${this.formatarNumero(item.valor, 1)} | ${this.formatarNumero(item.percentual, 1)}%`,
+          left: `${x}%`,
+          top: `${y}%`,
+        };
+      });
+  }
+
+  rotulosPizzaTipoFonte(): Array<{ texto: string; left: string; top: string }> {
+    return this.rotulosPizza(this.dadosPizzaTipoFonte());
+  }
+
+  rotulosPizzaProgramacao(): Array<{ texto: string; left: string; top: string }> {
+    return this.rotulosPizza(this.dadosPizzaProgramacao());
+  }
+
+  rotulosPizzaWorkbook(grafico: WorkbookGrafico): Array<{ texto: string; left: string; top: string }> {
+    return this.rotulosPizza(grafico.series.map((s) => ({ valor: s.valor, percentual: s.percentual })));
+  }
+
   private paletteWorkbook = ["#d95f02", "#1b9e77", "#457b9d", "#e9c46a", "#e76f51", "#6d597a", "#264653"];
 
-  workbookAbasDisponiveis(): string[] {
-    const abas = Array.from(new Set(this.workbookGraficos.map((g) => g.aba)));
-    return abas.sort((a, b) => {
-      const na = Number(a);
-      const nb = Number(b);
-      if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
-      if (Number.isFinite(na)) return -1;
-      if (Number.isFinite(nb)) return 1;
-      return a.localeCompare(b, "pt-BR");
-    });
+  workbookTrechosDisponiveis(): string[] {
+    return Array.from(new Set(this.workbookGraficos.map((g) => g.trecho?.trim()).filter((v) => !!v) as string[])).sort(
+      (a, b) => a.localeCompare(b, "pt-BR"),
+    );
   }
 
   graficosWorkbookFiltrados(): WorkbookGrafico[] {
-    if (!this.workbookAbaSelecionada) return this.workbookGraficos;
-    return this.workbookGraficos.filter((g) => g.aba === this.workbookAbaSelecionada);
+    if (!this.workbookTrechoSelecionado) return this.workbookGraficos;
+    return this.workbookGraficos.filter((g) => (g.trecho ?? "") === this.workbookTrechoSelecionado);
   }
 
   estiloPizzaWorkbook(grafico: WorkbookGrafico): string {
@@ -892,6 +967,15 @@ export class AppComponent implements OnInit {
 
   corSerieWorkbook(index: number): string {
     return this.paletteWorkbook[index % this.paletteWorkbook.length];
+  }
+
+  maxEvolucaoKm(): number {
+    const max = this.evolucaoMensal.reduce((acc, item) => Math.max(acc, item.geralKm, item.trechoKm), 0);
+    return max || 1;
+  }
+
+  barraEvolucao(valor: number): string {
+    return `${Math.max(2, (valor / this.maxEvolucaoKm()) * 100)}%`;
   }
 
   async recarregarGraficosWorkbook(): Promise<void> {
@@ -906,11 +990,11 @@ export class AppComponent implements OnInit {
     });
 
     this.workbookGraficos = result as WorkbookGrafico[];
-    const abas = this.workbookAbasDisponiveis();
-    if (abas.length === 0) {
-      this.workbookAbaSelecionada = "";
-    } else if (!abas.includes(this.workbookAbaSelecionada)) {
-      this.workbookAbaSelecionada = abas[0];
+    const trechos = this.workbookTrechosDisponiveis();
+    if (trechos.length === 0) {
+      this.workbookTrechoSelecionado = "";
+    } else if (!trechos.includes(this.workbookTrechoSelecionado)) {
+      this.workbookTrechoSelecionado = trechos[0];
     }
   }
 
@@ -1308,7 +1392,7 @@ export class AppComponent implements OnInit {
           children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
           children.push(
             new Paragraph({
-              children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
+              children: [new ImageRun({ type: "png", data: image, transformation: { width: 302, height: 193 } })],
             }),
           );
         }
@@ -1328,7 +1412,7 @@ export class AppComponent implements OnInit {
           children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
           children.push(
             new Paragraph({
-              children: [new ImageRun({ type: "png", data: image, transformation: { width: 620, height: 355 } })],
+              children: [new ImageRun({ type: "png", data: image, transformation: { width: 302, height: 193 } })],
             }),
           );
         }

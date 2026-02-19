@@ -103,6 +103,7 @@ export default defineSchema({
     ordem: v.number(),
     titulo: v.string(),
     tipoGrafico: v.string(),
+    trecho: v.optional(v.string()),
     labels: v.array(v.string()),
     valores: v.array(v.number()),
     arquivoOrigem: v.string(),

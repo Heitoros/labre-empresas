@@ -960,6 +960,60 @@ export const obterGraficosCompetencia = query({
   },
 });
 
+export const obterEvolucaoManutencao = query({
+  args: {
+    regiao: v.number(),
+    ano: v.number(),
+    trecho: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    if (!Number.isInteger(args.regiao) || args.regiao < 1 || args.regiao > 99) {
+      throw new Error("Regiao invalida. Use valor inteiro entre 1 e 99.");
+    }
+    if (!Number.isInteger(args.ano) || args.ano < 2000 || args.ano > 2100) {
+      throw new Error("Ano invalido. Use valor entre 2000 e 2100.");
+    }
+
+    const todos = await ctx.db.query("trechos").collect();
+    const trechosAno = todos.filter((t) => t.regiao === args.regiao && t.ano === args.ano);
+
+    const trechosDisponiveis = Array.from(new Set(trechosAno.map((t) => t.trecho).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b, "pt-BR"),
+    );
+
+    const trechoSelecionado = args.trecho && trechosDisponiveis.includes(args.trecho) ? args.trecho : trechosDisponiveis[0] ?? "";
+    const meses = Array.from({ length: 12 }, (_, i) => i + 1);
+
+    const mensal = meses.map((mes) => {
+      const competencia = `${args.ano}-${String(mes).padStart(2, "0")}`;
+      let geralKm = 0;
+      let trechoKm = 0;
+
+      for (const item of trechosAno) {
+        if (item.programacao?.[competencia] !== true) continue;
+        const km = item.extKm ?? 0;
+        geralKm += km;
+        if (trechoSelecionado && item.trecho === trechoSelecionado) trechoKm += km;
+      }
+
+      return {
+        mes,
+        competencia,
+        geralKm: Number(geralKm.toFixed(2)),
+        trechoKm: Number(trechoKm.toFixed(2)),
+      };
+    });
+
+    return {
+      regiao: args.regiao,
+      ano: args.ano,
+      trechoSelecionado,
+      trechosDisponiveis,
+      mensal,
+    };
+  },
+});
+
 export const obterInconsistenciasImportacao = query({
   args: {
     regiao: v.number(),
