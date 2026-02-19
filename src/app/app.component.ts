@@ -1155,6 +1155,22 @@ export class AppComponent implements OnInit {
     return bytes;
   }
 
+  private async bytesParaImagem(bytes: Uint8Array): Promise<HTMLImageElement> {
+    const arrayBuffer = bytes.slice().buffer as ArrayBuffer;
+    const blob = new Blob([arrayBuffer], { type: "image/png" });
+    const url = URL.createObjectURL(blob);
+    try {
+      return await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Falha ao carregar imagem temporaria."));
+        img.src = url;
+      });
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
   private async renderizarPizzaWorkbook(titulo: string, series: WorkbookSerie[]): Promise<Uint8Array> {
     const width = 620;
     const height = 395;
@@ -1281,6 +1297,66 @@ export class AppComponent implements OnInit {
     }
 
     return this.dataUrlParaBytes(canvas.toDataURL("image/png"));
+  }
+
+  private agruparGraficosPorTrecho(graficos: WorkbookGrafico[]): Array<{ trecho: string; graficos: WorkbookGrafico[] }> {
+    const porTrecho = new Map<string, WorkbookGrafico[]>();
+    for (const g of graficos) {
+      const trecho = (g.trecho ?? "Trecho nao informado").trim() || "Trecho nao informado";
+      const lista = porTrecho.get(trecho) ?? [];
+      lista.push(g);
+      porTrecho.set(trecho, lista);
+    }
+
+    return Array.from(porTrecho.entries())
+      .map(([trecho, lista]) => ({
+        trecho,
+        graficos: [...lista].sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR")),
+      }))
+      .sort((a, b) => a.trecho.localeCompare(b.trecho, "pt-BR"));
+  }
+
+  private async renderizarBlocoGraficosTrecho(
+    tipo: "PAV" | "NAO_PAV",
+    trecho: string,
+    graficos: WorkbookGrafico[],
+  ): Promise<{ data: Uint8Array; width: number; height: number }> {
+    const tileW = 302;
+    const tileH = 193;
+    const cols = 2;
+    const gap = 14;
+    const pad = 14;
+    const headerH = 48;
+    const rows = Math.max(1, Math.ceil(graficos.length / cols));
+    const width = pad * 2 + cols * tileW + gap * (cols - 1);
+    const height = headerH + pad + rows * tileH + (rows - 1) * gap + pad;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Falha ao inicializar bloco grafico do relatorio.");
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "#1f2933";
+    ctx.font = "bold 18px DM Sans, Segoe UI, sans-serif";
+    ctx.fillText(`${tipo} - ${trecho}`.slice(0, 82), pad, 30);
+
+    for (let i = 0; i < graficos.length; i += 1) {
+      const g = graficos[i];
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      const x = pad + col * (tileW + gap);
+      const y = headerH + pad + row * (tileH + gap);
+
+      const bytes = await this.renderizarPizzaWorkbook(g.titulo, g.series);
+      const img = await this.bytesParaImagem(bytes);
+      ctx.drawImage(img, x, y, tileW, tileH);
+    }
+
+    return { data: this.dataUrlParaBytes(canvas.toDataURL("image/png")), width, height };
   }
 
   private selecionarPrimeiroGraficoPorTitulo(graficos: WorkbookGrafico[]): WorkbookGrafico[] {
@@ -1490,12 +1566,15 @@ export class AppComponent implements OnInit {
           ),
         );
       } else {
-        for (const g of workbookPav) {
-          const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
-          children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
+        const pavPorTrecho = this.agruparGraficosPorTrecho(workbookPav);
+        for (const grupo of pavPorTrecho) {
+          const bloco = await this.renderizarBlocoGraficosTrecho("PAV", grupo.trecho, grupo.graficos);
+          const largura = 560;
+          const altura = Math.round((bloco.height / bloco.width) * largura);
+          children.push(new Paragraph({ text: `Trecho ${grupo.trecho}`, heading: HeadingLevel.HEADING_3 }));
           children.push(
             new Paragraph({
-              children: [new ImageRun({ type: "png", data: image, transformation: { width: 302, height: 193 } })],
+              children: [new ImageRun({ type: "png", data: bloco.data, transformation: { width: largura, height: altura } })],
             }),
           );
         }
@@ -1510,12 +1589,15 @@ export class AppComponent implements OnInit {
           ),
         );
       } else {
-        for (const g of workbookNaoPav) {
-          const image = await this.renderizarPizzaWorkbook(g.titulo, g.series);
-          children.push(new Paragraph({ text: `Aba ${g.aba} - ${g.titulo}`, heading: HeadingLevel.HEADING_3 }));
+        const naoPavPorTrecho = this.agruparGraficosPorTrecho(workbookNaoPav);
+        for (const grupo of naoPavPorTrecho) {
+          const bloco = await this.renderizarBlocoGraficosTrecho("NAO_PAV", grupo.trecho, grupo.graficos);
+          const largura = 560;
+          const altura = Math.round((bloco.height / bloco.width) * largura);
+          children.push(new Paragraph({ text: `Trecho ${grupo.trecho}`, heading: HeadingLevel.HEADING_3 }));
           children.push(
             new Paragraph({
-              children: [new ImageRun({ type: "png", data: image, transformation: { width: 302, height: 193 } })],
+              children: [new ImageRun({ type: "png", data: bloco.data, transformation: { width: largura, height: altura } })],
             }),
           );
         }
