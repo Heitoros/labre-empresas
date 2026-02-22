@@ -25,3 +25,25 @@ Ambiente backend de producao: https://benevolent-raccoon-460.convex.cloud
   b) importacao real
   c) download de relatorios
   d) aprovacao formal
+
+4) ATUALIZACAO TECNICA - 2026-02-19
+- Comando executado: npm run release:check
+- Build frontend: OK
+- Dry-run fechamento Dezembro: OK (12 importacoes, todas ok=true)
+- Sem linhas com erro fatal no dry-run (linhasComErro=0 em todas as importacoes)
+
+Resumo do dry-run por regiao:
+- Regiao 1: PAV 82 validas / 1 ignorada; NAO_PAV 114 validas / 2 ignoradas
+- Regiao 2: PAV 57 validas / 1 ignorada; NAO_PAV 14 validas / 1 ignorada
+- Regiao 3: PAV 48 validas / 1 ignorada; NAO_PAV 18 validas / 256 ignoradas
+- Regiao 11: PAV 24 validas / 1 ignorada; NAO_PAV 14 validas / 1 ignorada
+- Regiao 12: PAV 32 validas / 1 ignorada; NAO_PAV 25 validas / 1 ignorada
+- Regiao 13: PAV 42 validas / 1 ignorada; NAO_PAV 23 validas / 1 ignorada
+
+Status atualizado da pendencia funcional:
+- Mantida a necessidade de validacao humana no frontend publicado (usuario-chave).
+- Itens pendentes para encerramento formal:
+  a) login em ambiente publicado
+  b) importacao real (nao dry-run)
+  c) download de relatorios no frontend publicado
+  d) aprovacao formal registrada

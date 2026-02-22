@@ -70,12 +70,64 @@
         </select>
       </label>
 
+      <label>
+        Estrutura (JSON)
+        <input type="file" accept=".json" (change)="onEstruturaRelatorioSelecionada($event)" />
+      </label>
+
+      <label>
+        Template base (DOCX)
+        <input type="file" accept=".docx" (change)="onTemplateDocxSelecionado($event)" />
+      </label>
+
+      <label>
+        Largura bloco (cm)
+        <input
+          [(ngModel)]="relatorioLarguraBlocoCm"
+          (blur)="salvarDimensoesRelatorio()"
+          name="relatorioLarguraBlocoCm"
+          type="number"
+          step="0.1"
+          min="8"
+          max="21"
+        />
+      </label>
+
+      <label>
+        Altura PAV (cm)
+        <input
+          [(ngModel)]="relatorioAlturaPavCm"
+          (blur)="salvarDimensoesRelatorio()"
+          name="relatorioAlturaPavCm"
+          type="number"
+          step="0.1"
+          min="6"
+          max="25"
+        />
+      </label>
+
+      <label>
+        Altura NAO_PAV (cm)
+        <input
+          [(ngModel)]="relatorioAlturaNaoPavCm"
+          (blur)="salvarDimensoesRelatorio()"
+          name="relatorioAlturaNaoPavCm"
+          type="number"
+          step="0.1"
+          min="4"
+          max="25"
+        />
+      </label>
+
       <button type="submit">Atualizar</button>
       <button type="button" class="secondary-btn" (click)="baixarDocxCompetencia()">Baixar DOCX regional</button>
       <button type="button" class="secondary-btn" [disabled]="gerandoConsolidado" (click)="baixarDocxConsolidado()">
         {{ gerandoConsolidado ? "Gerando consolidado..." : "Baixar DOCX consolidado" }}
       </button>
       <button type="button" class="secondary-btn" (click)="logout()">Sair</button>
+
+      <p class="card-meta template-meta" *ngIf="templateEstruturaMensagem">{{ templateEstruturaMensagem }} O DOCX regional passara a usar esses titulos de secao.</p>
+      <p class="card-meta template-meta" *ngIf="templateDocxMensagem">{{ templateDocxMensagem }}</p>
     </form>
   </header>
 
@@ -173,8 +225,6 @@
           <div class="pie" [style.background]="estiloPizzaConica(dadosPizzaTipoFonte())"></div>
           <span
             class="pie-label"
-            [class.pie-label-right]="r.align === 'right'"
-            [class.pie-label-left]="r.align === 'left'"
             *ngFor="let r of rotulosPizzaTipoFonte()"
             [style.left]="r.left"
             [style.top]="r.top"
@@ -194,8 +244,6 @@
           <div class="pie" [style.background]="estiloPizzaConica(dadosPizzaProgramacao())"></div>
           <span
             class="pie-label"
-            [class.pie-label-right]="r.align === 'right'"
-            [class.pie-label-left]="r.align === 'left'"
             *ngFor="let r of rotulosPizzaProgramacao()"
             [style.left]="r.left"
             [style.top]="r.top"
@@ -225,7 +273,7 @@
         <label>
           Trecho
           <select [(ngModel)]="workbookTrechoSelecionado" name="workbookTrechoSelecionado">
-            <option *ngFor="let trecho of workbookTrechosDisponiveis()" [ngValue]="trecho">{{ trecho }}</option>
+            <option *ngFor="let trecho of workbookTrechosDisponiveis()" [ngValue]="trecho">{{ rotuloTrechoWorkbook(trecho, workbookTipoFonte) }}</option>
           </select>
         </label>
       </div>
@@ -233,14 +281,12 @@
       <div class="workbook-grid" *ngIf="graficosWorkbookFiltrados().length > 0; else semGraficosWorkbookTpl">
         <article class="workbook-item" *ngFor="let g of graficosWorkbookFiltrados()">
           <h3>{{ g.titulo }}</h3>
-          <p class="card-meta">Trecho {{ g.trecho || '-' }}</p>
+          <p class="card-meta">Trecho {{ rotuloTrechoWorkbook(g.trecho, workbookTipoFonte) }}</p>
           <div class="pie-wrap">
             <div class="pie-shell">
               <div class="pie" [style.background]="estiloPizzaWorkbook(g)"></div>
               <span
                 class="pie-label"
-                [class.pie-label-right]="r.align === 'right'"
-                [class.pie-label-left]="r.align === 'left'"
                 *ngFor="let r of rotulosPizzaWorkbook(g)"
                 [style.left]="r.left"
                 [style.top]="r.top"

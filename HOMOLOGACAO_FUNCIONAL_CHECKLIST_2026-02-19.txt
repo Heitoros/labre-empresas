@@ -1,0 +1,46 @@
+HOMOLOGACAO FUNCIONAL - CHECKLIST FINAL
+
+Data: 2026-02-19
+Projeto: LABRE Empresas
+Ambiente backend: https://benevolent-raccoon-460.convex.cloud
+
+Pre-condicao tecnica (ja validada):
+- npm run release:check = OK
+- Build frontend = OK
+- Fechamento Dezembro dry-run = OK
+
+Objetivo desta etapa:
+Executar validacao humana no frontend publicado para fechamento formal.
+
+PASSO A PASSO (USUARIO-CHAVE)
+
+1) Login
+[ ] Acessar frontend publicado
+[ ] Entrar com usuario autorizado
+[ ] Confirmar acesso sem erro
+
+2) Importacao real
+[ ] Selecionar regiao/ano/mes corretos
+[ ] Executar importacao lote PAV + NAO_PAV (sem dry-run)
+[ ] Confirmar status final sem erro fatal
+
+3) Relatorios no frontend publicado
+[ ] Baixar relatorio regional (markdown)
+[ ] Baixar relatorio consolidado (markdown)
+[ ] (Opcional) Registrar local dos arquivos gerados
+
+4) Evidencias minimas
+[ ] Captura de tela do login concluido
+[ ] Captura de tela do resultado da importacao
+[ ] Captura de tela/download dos relatorios
+
+5) Aprovacao formal
+[ ] Aprovado por usuario-chave
+[ ] Nome:
+[ ] Data:
+[ ] Observacoes finais:
+
+CRITERIO DE ENCERRAMENTO
+- Todos os itens acima marcados.
+- Sem erro fatal no fluxo de importacao.
+- Aprovacao formal registrada.
