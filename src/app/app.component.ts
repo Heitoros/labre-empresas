@@ -2133,8 +2133,11 @@ export class AppComponent implements OnInit {
     };
 
     const updateByTag = (xml: string, tag: "inline" | "anchor"): string => {
-      const pattern = new RegExp(`<wp:${tag}\\b[\\s\\S]*?<a:blip[^>]*r:embed="${rid}"[^>]*>[\\s\\S]*?<\\/wp:${tag}>`, "g");
-      return xml.replace(pattern, (segment) => atualizarSegmento(segment));
+      const pattern = new RegExp(`<wp:${tag}\\b[\\s\\S]*?<\\/wp:${tag}>`, "g");
+      return xml.replace(pattern, (segment) => {
+        if (!segment.includes(`r:embed="${rid}"`)) return segment;
+        return atualizarSegmento(segment);
+      });
     };
 
     return updateByTag(updateByTag(documentXml, "inline"), "anchor");
