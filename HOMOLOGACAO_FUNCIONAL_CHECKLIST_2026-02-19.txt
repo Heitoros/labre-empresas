@@ -56,3 +56,10 @@ ATUALIZACAO - 2026-02-22 (LOTE 01 JUL-OUT)
 - Resultado de importacao: sem erro fatal nas cargas executadas.
 - Ajuste aplicado na evolucao mensal para evitar duplicidade de snapshots entre meses.
 - Status desta operacao: CONCLUIDA.
+
+ATUALIZACAO - 2026-02-22 (LOTE 04 JUL-NOV)
+- Importacao real concluida para as competencias 2025-07, 2025-08, 2025-09, 2025-10 e 2025-11 (regioes 11, 12 e 13; PAV e NAO_PAV).
+- Resultado de importacao: sem erro fatal nas cargas executadas.
+- Observacao operacional: dois arquivos de R.13 (agosto e setembro) com nome fora do padrao exigiram tipagem manual como NAO_PAV no comando.
+- Recomendacao: padronizar nome desses arquivos para conter "rodovias nao pavimentadas" e evitar ajuste manual em futuras cargas.
+- Status desta operacao: CONCLUIDA.
