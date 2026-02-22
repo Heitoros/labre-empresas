@@ -322,7 +322,7 @@
         </label>
       </div>
       <div class="bar-list">
-        <article class="bar-row bar-evolucao" *ngFor="let item of evolucaoMensal">
+        <article class="bar-row bar-evolucao" *ngFor="let item of evolucaoMensal; let i = index">
           <span class="code">{{ item.competencia }}</span>
           <div class="bar-bg">
             <div class="bar-fill" [style.width]="barraEvolucao(valorEvolucaoGeral(item))"></div>
@@ -332,6 +332,14 @@
             <div class="bar-fill trecho-fill" [style.width]="barraEvolucao(valorEvolucaoTrecho(item))"></div>
           </div>
           <span class="value">{{ tituloValorEvolucao("Trecho") }} {{ valorEvolucaoTrecho(item) | number: '1.2-2' }} km</span>
+          <p class="evolucao-delta" [ngClass]="classeDeltaEvolucao(i, 'GERAL')">
+            Delta geral vs mes anterior: {{ deltaEvolucao(i, "GERAL") | number: '1.2-2' }} km
+            <span *ngIf="deltaEvolucaoPercentual(i, 'GERAL') !== null">({{ deltaEvolucaoPercentual(i, "GERAL") | number: '1.1-1' }}%)</span>
+          </p>
+          <p class="evolucao-delta" [ngClass]="classeDeltaEvolucao(i, 'TRECHO')">
+            Delta trecho vs mes anterior: {{ deltaEvolucao(i, "TRECHO") | number: '1.2-2' }} km
+            <span *ngIf="deltaEvolucaoPercentual(i, 'TRECHO') !== null">({{ deltaEvolucaoPercentual(i, "TRECHO") | number: '1.1-1' }}%)</span>
+          </p>
         </article>
       </div>
     </section>

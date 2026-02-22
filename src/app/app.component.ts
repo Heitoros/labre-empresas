@@ -1165,6 +1165,31 @@ export class AppComponent implements OnInit {
     return `${prefixo} carregado`;
   }
 
+  deltaEvolucao(indice: number, alvo: "GERAL" | "TRECHO"): number {
+    if (indice <= 0 || indice >= this.evolucaoMensal.length) return 0;
+    const atual = this.evolucaoMensal[indice];
+    const anterior = this.evolucaoMensal[indice - 1];
+    const valorAtual = alvo === "GERAL" ? this.valorEvolucaoGeral(atual) : this.valorEvolucaoTrecho(atual);
+    const valorAnterior = alvo === "GERAL" ? this.valorEvolucaoGeral(anterior) : this.valorEvolucaoTrecho(anterior);
+    return Number((valorAtual - valorAnterior).toFixed(2));
+  }
+
+  deltaEvolucaoPercentual(indice: number, alvo: "GERAL" | "TRECHO"): number | null {
+    if (indice <= 0 || indice >= this.evolucaoMensal.length) return null;
+    const anterior = this.evolucaoMensal[indice - 1];
+    const base = alvo === "GERAL" ? this.valorEvolucaoGeral(anterior) : this.valorEvolucaoTrecho(anterior);
+    if (base === 0) return null;
+    const delta = this.deltaEvolucao(indice, alvo);
+    return Number(((delta / base) * 100).toFixed(1));
+  }
+
+  classeDeltaEvolucao(indice: number, alvo: "GERAL" | "TRECHO"): string {
+    const delta = this.deltaEvolucao(indice, alvo);
+    if (delta > 0) return "delta-up";
+    if (delta < 0) return "delta-down";
+    return "delta-flat";
+  }
+
   async recarregarGraficosWorkbook(): Promise<void> {
     if (!this.sessaoAtual?.token) return;
 
