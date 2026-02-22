@@ -104,6 +104,8 @@ type EvolucaoManutencaoItem = {
   competencia: string;
   geralKm: number;
   trechoKm: number;
+  geralKmCarregado: number;
+  trechoKmCarregado: number;
 };
 type RelatorioTemplateHeading = {
   index: number;
@@ -181,6 +183,7 @@ export class AppComponent implements OnInit {
   workbookGraficos: WorkbookGrafico[] = [];
   evolucaoTrechosDisponiveis: string[] = [];
   evolucaoTrechoSelecionado = "";
+  evolucaoModo: "PROGRAMADO" | "TOTAL_CARREGADO" = "PROGRAMADO";
   evolucaoMensal: EvolucaoManutencaoItem[] = [];
   templateEstruturaNome = "";
   templateEstruturaMensagem = "";
@@ -1138,12 +1141,28 @@ export class AppComponent implements OnInit {
   }
 
   maxEvolucaoKm(): number {
-    const max = this.evolucaoMensal.reduce((acc, item) => Math.max(acc, item.geralKm, item.trechoKm), 0);
+    const max = this.evolucaoMensal.reduce(
+      (acc, item) => Math.max(acc, this.valorEvolucaoGeral(item), this.valorEvolucaoTrecho(item)),
+      0,
+    );
     return max || 1;
   }
 
   barraEvolucao(valor: number): string {
     return `${Math.max(2, (valor / this.maxEvolucaoKm()) * 100)}%`;
+  }
+
+  valorEvolucaoGeral(item: EvolucaoManutencaoItem): number {
+    return this.evolucaoModo === "PROGRAMADO" ? item.geralKm : item.geralKmCarregado;
+  }
+
+  valorEvolucaoTrecho(item: EvolucaoManutencaoItem): number {
+    return this.evolucaoModo === "PROGRAMADO" ? item.trechoKm : item.trechoKmCarregado;
+  }
+
+  tituloValorEvolucao(prefixo: "Geral" | "Trecho"): string {
+    if (this.evolucaoModo === "PROGRAMADO") return `${prefixo} programado`;
+    return `${prefixo} carregado`;
   }
 
   async recarregarGraficosWorkbook(): Promise<void> {

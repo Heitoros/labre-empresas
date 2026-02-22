@@ -313,18 +313,25 @@
             <option *ngFor="let trecho of evolucaoTrechosDisponiveis" [ngValue]="trecho">{{ trecho }}</option>
           </select>
         </label>
+        <label>
+          Modo
+          <select [(ngModel)]="evolucaoModo" name="evolucaoModo">
+            <option value="PROGRAMADO">Programado</option>
+            <option value="TOTAL_CARREGADO">Total carregado</option>
+          </select>
+        </label>
       </div>
       <div class="bar-list">
         <article class="bar-row bar-evolucao" *ngFor="let item of evolucaoMensal">
           <span class="code">{{ item.competencia }}</span>
           <div class="bar-bg">
-            <div class="bar-fill" [style.width]="barraEvolucao(item.geralKm)"></div>
+            <div class="bar-fill" [style.width]="barraEvolucao(valorEvolucaoGeral(item))"></div>
           </div>
-          <span class="value">Geral {{ item.geralKm | number: '1.2-2' }} km</span>
+          <span class="value">{{ tituloValorEvolucao("Geral") }} {{ valorEvolucaoGeral(item) | number: '1.2-2' }} km</span>
           <div class="bar-bg trecho-bg">
-            <div class="bar-fill trecho-fill" [style.width]="barraEvolucao(item.trechoKm)"></div>
+            <div class="bar-fill trecho-fill" [style.width]="barraEvolucao(valorEvolucaoTrecho(item))"></div>
           </div>
-          <span class="value">Trecho {{ item.trechoKm | number: '1.2-2' }} km</span>
+          <span class="value">{{ tituloValorEvolucao("Trecho") }} {{ valorEvolucaoTrecho(item) | number: '1.2-2' }} km</span>
         </article>
       </div>
     </section>

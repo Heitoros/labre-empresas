@@ -1000,6 +1000,29 @@ export const obterEvolucaoManutencao = query({
     }
 
     const baseEvolucao = Array.from(snapshotsMaisRecentes.values());
+    const snapshotsPorMes = new Map<number, typeof baseEvolucao>();
+    for (const mes of Array.from({ length: 12 }, (_, i) => i + 1)) {
+      const itensMes = trechosAno.filter((t) => t.mes === mes);
+      const recentesMes = new Map<string, (typeof trechosAno)[number]>();
+
+      for (const item of itensMes) {
+        const key = [
+          item.tipoFonte,
+          item.trecho,
+          item.sre ?? "",
+          item.subtrechos ?? "",
+          item.tipo ?? "",
+          item.extKm ?? "",
+        ].join("|");
+
+        const existente = recentesMes.get(key);
+        if (!existente || item.importadoEm > existente.importadoEm) {
+          recentesMes.set(key, item);
+        }
+      }
+
+      snapshotsPorMes.set(mes, Array.from(recentesMes.values()));
+    }
 
     const trechosDisponiveis = Array.from(new Set(baseEvolucao.map((t) => t.trecho).filter(Boolean))).sort((a, b) =>
       a.localeCompare(b, "pt-BR"),
@@ -1012,6 +1035,15 @@ export const obterEvolucaoManutencao = query({
       const competencia = `${args.ano}-${String(mes).padStart(2, "0")}`;
       let geralKm = 0;
       let trechoKm = 0;
+      let geralKmCarregado = 0;
+      let trechoKmCarregado = 0;
+
+      const baseMes = snapshotsPorMes.get(mes) ?? [];
+      for (const item of baseMes) {
+        const km = item.extKm ?? 0;
+        geralKmCarregado += km;
+        if (trechoSelecionado && item.trecho === trechoSelecionado) trechoKmCarregado += km;
+      }
 
       for (const item of baseEvolucao) {
         if (item.programacao?.[competencia] !== true) continue;
@@ -1025,6 +1057,8 @@ export const obterEvolucaoManutencao = query({
         competencia,
         geralKm: Number(geralKm.toFixed(2)),
         trechoKm: Number(trechoKm.toFixed(2)),
+        geralKmCarregado: Number(geralKmCarregado.toFixed(2)),
+        trechoKmCarregado: Number(trechoKmCarregado.toFixed(2)),
       };
     });
 
