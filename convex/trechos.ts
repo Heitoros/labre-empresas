@@ -977,7 +977,31 @@ export const obterEvolucaoManutencao = query({
     const todos = await ctx.db.query("trechos").collect();
     const trechosAno = todos.filter((t) => t.regiao === args.regiao && t.ano === args.ano);
 
-    const trechosDisponiveis = Array.from(new Set(trechosAno.map((t) => t.trecho).filter(Boolean))).sort((a, b) =>
+    const snapshotsMaisRecentes = new Map<string, (typeof trechosAno)[number]>();
+    for (const item of trechosAno) {
+      const key = [
+        item.tipoFonte,
+        item.trecho,
+        item.sre ?? "",
+        item.subtrechos ?? "",
+        item.tipo ?? "",
+        item.extKm ?? "",
+      ].join("|");
+
+      const existente = snapshotsMaisRecentes.get(key);
+      if (!existente) {
+        snapshotsMaisRecentes.set(key, item);
+        continue;
+      }
+
+      if (item.mes > existente.mes || (item.mes === existente.mes && item.importadoEm > existente.importadoEm)) {
+        snapshotsMaisRecentes.set(key, item);
+      }
+    }
+
+    const baseEvolucao = Array.from(snapshotsMaisRecentes.values());
+
+    const trechosDisponiveis = Array.from(new Set(baseEvolucao.map((t) => t.trecho).filter(Boolean))).sort((a, b) =>
       a.localeCompare(b, "pt-BR"),
     );
 
@@ -989,7 +1013,7 @@ export const obterEvolucaoManutencao = query({
       let geralKm = 0;
       let trechoKm = 0;
 
-      for (const item of trechosAno) {
+      for (const item of baseEvolucao) {
         if (item.programacao?.[competencia] !== true) continue;
         const km = item.extKm ?? 0;
         geralKm += km;

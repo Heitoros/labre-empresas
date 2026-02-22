@@ -50,3 +50,9 @@ ATUALIZACAO - 2026-02-22 (DOCX TEMPLATE)
 - Resultado validado: secao 1.5 (Mapa de localizacao) preservada com imagem e tamanho originais do template.
 - Resultado validado: substituicao aplicada somente nos blocos de grafico esperados.
 - Status desta correcao: CONCLUIDA.
+
+ATUALIZACAO - 2026-02-22 (LOTE 01 JUL-OUT)
+- Importacao real concluida para as competencias 2025-07, 2025-08, 2025-09 e 2025-10 (regioes 1, 2 e 3; PAV e NAO_PAV).
+- Resultado de importacao: sem erro fatal nas cargas executadas.
+- Ajuste aplicado na evolucao mensal para evitar duplicidade de snapshots entre meses.
+- Status desta operacao: CONCLUIDA.
