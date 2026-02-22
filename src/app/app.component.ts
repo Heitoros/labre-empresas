@@ -2087,6 +2087,11 @@ export class AppComponent implements OnInit {
     return n.includes("avaliacao do consorcio supervisor") && n.includes("condicoes de pista") && n.includes("extrapista");
   }
 
+  private isMapaLocalizacaoTemplate(text: string): boolean {
+    const n = this.normalizarTextoRelatorio(text);
+    return n.includes("mapa de localizacao");
+  }
+
   private updateRelationshipTargetXml(relsXml: string, rid: string, newTarget: string): string {
     const rx = new RegExp(`(<Relationship\\b[^>]*\\bId="${rid}"[^>]*\\bTarget=")(?:[^"]+)("[^>]*>)`);
     return relsXml.replace(rx, `$1${newTarget}$2`);
@@ -2202,6 +2207,7 @@ export class AppComponent implements OnInit {
     let trechoAtual = "";
     let aguardandoGrafico = false;
     let emResumoGeral = false;
+    let emMapaLocalizacao = false;
     let substituidos = 0;
 
     for (const paraMatch of paragraphMatches) {
@@ -2211,6 +2217,14 @@ export class AppComponent implements OnInit {
 
       if (normalizado.includes("resumo de analise do geral")) {
         emResumoGeral = true;
+        emMapaLocalizacao = false;
+      }
+
+      if (text && this.isMapaLocalizacaoTemplate(text)) {
+        emMapaLocalizacao = true;
+        emResumoGeral = false;
+        trechoAtual = "";
+        aguardandoGrafico = false;
       }
 
       const tipoDetectado = text ? this.detectTipoContextoTemplate(text) : undefined;
@@ -2219,13 +2233,22 @@ export class AppComponent implements OnInit {
       if (text && this.isTrechoHeadingTemplate(text)) {
         trechoAtual = this.sanitizeTrechoHeadingTemplate(text);
         emResumoGeral = false;
+        emMapaLocalizacao = false;
       }
-      if (text && this.isGraficoCaptionTemplate(text)) aguardandoGrafico = true;
+      if (text && this.isGraficoCaptionTemplate(text)) {
+        aguardandoGrafico = true;
+        emMapaLocalizacao = false;
+      }
 
       const embeds = [...paraXml.matchAll(/<a:blip[^>]*r:embed="([^"]+)"/g)].map((m) => m[1]);
       if (!embeds.length || !aguardandoGrafico) continue;
+      if (emMapaLocalizacao) continue;
 
       const trechoBusca = emResumoGeral ? "Trecho nao informado" : trechoAtual;
+      if (!trechoBusca.trim()) {
+        aguardandoGrafico = false;
+        continue;
+      }
       const { grupo, key, tipoUsado } = this.pickGrupoTrechoTemplateComFallback(gruposByKey, tipoAtual, trechoBusca);
       if (!grupo || !key || !tipoUsado) {
         aguardandoGrafico = false;
