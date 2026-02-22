@@ -1,0 +1,11 @@
+GUIA OPERACIONAL - RELATORIO REGIONAL VIA TEMPLATE DOCX
+
+1) Selecione regiao/ano/mes e clique em Atualizar.
+2) Em Estrutura (JSON), carregue o arquivo de estrutura extraido do DOCX base.
+3) Em Template base (DOCX), carregue o modelo oficial (com capa, mapa e secoes).
+4) Ajuste Largura bloco, Altura PAV e Altura NAO_PAV apenas para os blocos de graficos.
+5) Clique em Baixar DOCX regional e valide: capa, mapa (secao 1.5), e graficos substituidos por trecho.
+
+Observacoes:
+- O mapa de localizacao deve permanecer exatamente como no template.
+- A substituicao de imagem deve ocorrer somente nos blocos de grafico.

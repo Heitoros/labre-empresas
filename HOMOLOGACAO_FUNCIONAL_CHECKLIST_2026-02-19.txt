@@ -44,3 +44,9 @@ CRITERIO DE ENCERRAMENTO
 - Todos os itens acima marcados.
 - Sem erro fatal no fluxo de importacao.
 - Aprovacao formal registrada.
+
+ATUALIZACAO - 2026-02-22 (DOCX TEMPLATE)
+- Correcao validada no fluxo de relatorio regional via template DOCX.
+- Resultado validado: secao 1.5 (Mapa de localizacao) preservada com imagem e tamanho originais do template.
+- Resultado validado: substituicao aplicada somente nos blocos de grafico esperados.
+- Status desta correcao: CONCLUIDA.
