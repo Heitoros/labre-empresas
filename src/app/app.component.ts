@@ -1165,26 +1165,52 @@ export class AppComponent implements OnInit {
     return `${prefixo} carregado`;
   }
 
-  deltaEvolucao(indice: number, alvo: "GERAL" | "TRECHO"): number {
-    if (indice <= 0 || indice >= this.evolucaoMensal.length) return 0;
-    const atual = this.evolucaoMensal[indice];
-    const anterior = this.evolucaoMensal[indice - 1];
-    const valorAtual = alvo === "GERAL" ? this.valorEvolucaoGeral(atual) : this.valorEvolucaoTrecho(atual);
-    const valorAnterior = alvo === "GERAL" ? this.valorEvolucaoGeral(anterior) : this.valorEvolucaoTrecho(anterior);
-    return Number((valorAtual - valorAnterior).toFixed(2));
+  itemEvolucaoPorMes(mes: number): EvolucaoManutencaoItem | undefined {
+    return this.evolucaoMensal.find((item) => item.mes === mes);
   }
 
-  deltaEvolucaoPercentual(indice: number, alvo: "GERAL" | "TRECHO"): number | null {
-    if (indice <= 0 || indice >= this.evolucaoMensal.length) return null;
-    const anterior = this.evolucaoMensal[indice - 1];
-    const base = alvo === "GERAL" ? this.valorEvolucaoGeral(anterior) : this.valorEvolucaoTrecho(anterior);
-    if (base === 0) return null;
-    const delta = this.deltaEvolucao(indice, alvo);
-    return Number(((delta / base) * 100).toFixed(1));
+  mesAnteriorSelecionado(): number {
+    return this.mes === 1 ? 12 : this.mes - 1;
   }
 
-  classeDeltaEvolucao(indice: number, alvo: "GERAL" | "TRECHO"): string {
-    const delta = this.deltaEvolucao(indice, alvo);
+  rotuloMesEvolucao(mes: number): string {
+    return `${this.ano}-${String(mes).padStart(2, "0")}`;
+  }
+
+  valorEvolucaoPorMes(mes: number, alvo: "GERAL" | "TRECHO"): number {
+    const item = this.itemEvolucaoPorMes(mes);
+    if (!item) return 0;
+    return alvo === "GERAL" ? this.valorEvolucaoGeral(item) : this.valorEvolucaoTrecho(item);
+  }
+
+  maxComparativoEvolucao(alvo: "GERAL" | "TRECHO"): number {
+    const atual = this.valorEvolucaoPorMes(this.mes, alvo);
+    const anterior = this.valorEvolucaoPorMes(this.mesAnteriorSelecionado(), alvo);
+    const max = Math.max(atual, anterior);
+    return max > 0 ? max : 1;
+  }
+
+  alturaBarraComparativoEvolucao(mes: number, alvo: "GERAL" | "TRECHO"): string {
+    const valor = this.valorEvolucaoPorMes(mes, alvo);
+    const max = this.maxComparativoEvolucao(alvo);
+    return `${Math.max(6, (valor / max) * 100)}%`;
+  }
+
+  deltaComparativoEvolucao(alvo: "GERAL" | "TRECHO"): number {
+    const atual = this.valorEvolucaoPorMes(this.mes, alvo);
+    const anterior = this.valorEvolucaoPorMes(this.mesAnteriorSelecionado(), alvo);
+    return Number((atual - anterior).toFixed(2));
+  }
+
+  deltaComparativoEvolucaoPercentual(alvo: "GERAL" | "TRECHO"): number | null {
+    const anterior = this.valorEvolucaoPorMes(this.mesAnteriorSelecionado(), alvo);
+    if (anterior === 0) return null;
+    const delta = this.deltaComparativoEvolucao(alvo);
+    return Number(((delta / anterior) * 100).toFixed(1));
+  }
+
+  classeDeltaComparativoEvolucao(alvo: "GERAL" | "TRECHO"): string {
+    const delta = this.deltaComparativoEvolucao(alvo);
     if (delta > 0) return "delta-up";
     if (delta < 0) return "delta-down";
     return "delta-flat";
@@ -2223,6 +2249,178 @@ export class AppComponent implements OnInit {
     return updated;
   }
 
+  private escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  private tokenPlaceholder(value: string): string {
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .replace(/_+/g, "_");
+  }
+
+  private formatarNumeroPlaceholder(valor: number, casas: number): string {
+    return Number(valor.toFixed(casas)).toLocaleString("pt-BR", {
+      minimumFractionDigits: casas,
+      maximumFractionDigits: casas,
+      useGrouping: false,
+    });
+  }
+
+  private construirPlaceholdersResumoTemplate(
+    workbookPav: WorkbookGrafico[],
+    workbookNaoPav: WorkbookGrafico[],
+  ): Map<string, string> {
+    const map = new Map<string, string>();
+
+    map.set("REGIAO", String(this.regiao).padStart(2, "0"));
+    map.set("ANO", String(this.ano));
+    map.set("MES", String(this.mes).padStart(2, "0"));
+    map.set("MES_ANO", `${this.mesLabel(this.mes).toUpperCase()} DE ${this.ano}`);
+
+    const aliasesSerie = (tipo: "PAV" | "NAO_PAV", chartTitle: string, serieLabel: string): string[] => {
+      const n = this.normalizarTextoRelatorio(serieLabel);
+      const chartNorm = this.normalizarTextoRelatorio(chartTitle);
+      const canon = this.tokenPlaceholder(serieLabel);
+      const out: string[] = [];
+
+      if (n.includes("bom")) out.push("BOM");
+
+      if (tipo === "NAO_PAV") {
+        if (n.includes("reg")) out.push("REGULAR");
+        if (n.includes("ruim") && !n.includes("irr")) out.push("RUIM");
+        if (n.includes("ruim") && n.includes("irr")) out.push("RUIM");
+        if (n.includes("pessima") || n.includes("atoleiro") || n.includes("pto")) out.push("PESSIMA");
+        if (n.includes("irr") && !n.includes("ruim")) out.push("IRREGULAR");
+
+        if (chartNorm.includes("drenagem") && chartNorm.includes("superficial")) {
+          if (n.includes("limp")) out.push("DRENAGEM_LIMPA");
+          if (n.includes("obstru")) out.push("DRENAGEM_OBSTRUIDA");
+          if (n.includes("ausent")) out.push("DRENAGEM_AUSENTE");
+        }
+      }
+
+      if (tipo === "PAV") {
+        if (canon.includes("REM_L")) out.push("REM_L");
+        if (canon.includes("REM_I")) out.push("REM_I");
+        if (canon.includes("BUR_L")) out.push("BUR_L");
+        if (canon.includes("BUR_I")) out.push("BUR_I");
+
+        if (chartNorm.includes("vegetacao") && chartNorm.includes("dominio")) {
+          if (n.includes("reg")) out.push("VEGETACAO_REGULAR");
+          if (n.includes("inadeq")) out.push("VEGETACAO_INADEQUADA");
+        }
+
+        if (chartNorm.includes("drenagem") && chartNorm.includes("superficial")) {
+          if (n.includes("suj") || n.includes("obstru")) out.push("DRENAGEM_SUJA");
+          if (n.includes("limp")) out.push("DRENAGEM_LIMPA");
+          if (n.includes("danific") || n.includes("ausent")) out.push("DRENAGEM_DANIFICADA");
+        }
+
+        if (chartNorm.includes("sinalizacao") && chartNorm.includes("horizontal")) {
+          if (n.includes("bom") || n.includes("boa")) out.push("SINAL_H_BOA");
+          if (n.includes("reg")) out.push("SINAL_H_REGULAR");
+          if (n.includes("inex") || n.includes("ausent")) out.push("SINAL_H_INEXISTENTE");
+        }
+
+        if (chartNorm.includes("sinalizacao") && chartNorm.includes("vertical")) {
+          if (n.includes("pouc")) out.push("SINAL_V_POUCAS");
+          if (n.includes("inex") || n.includes("ausent") || n.includes("nao")) out.push("SINAL_V_INEXISTENTE");
+          if (n.includes("bom") || n.includes("boa")) out.push("SINAL_V_BOA");
+        }
+      }
+
+      return Array.from(new Set(out));
+    };
+
+    const adicionarSerie = (tipo: "PAV" | "NAO_PAV", grafico: WorkbookGrafico, serie: WorkbookSerie): void => {
+      const chartKey = this.tokenPlaceholder(grafico.titulo || `GRAFICO_${grafico.ordem}`);
+      const serieKey = this.tokenPlaceholder(serie.label || "SERIE");
+      const prefixo = `${tipo}_${chartKey}_${serieKey}`;
+
+      const km = this.formatarNumeroPlaceholder(serie.valor ?? 0, 2);
+      const pct = this.formatarNumeroPlaceholder(serie.percentual ?? 0, 1);
+      const pctInt = String(Math.round(serie.percentual ?? 0));
+
+      map.set(`${prefixo}_KM`, km);
+      map.set(`${prefixo}_PCT`, pct);
+      map.set(`${prefixo}_PCT_INT`, pctInt);
+
+      const prefixoCurto = `${tipo}_${serieKey}`;
+      if (!map.has(`${prefixoCurto}_KM`)) map.set(`${prefixoCurto}_KM`, km);
+      if (!map.has(`${prefixoCurto}_PCT`)) map.set(`${prefixoCurto}_PCT`, pct);
+      if (!map.has(`${prefixoCurto}_PCT_INT`)) map.set(`${prefixoCurto}_PCT_INT`, pctInt);
+
+      for (const alias of aliasesSerie(tipo, grafico.titulo || "", serie.label)) {
+        const aliasKey = `${tipo}_${alias}`;
+        if (!map.has(`${aliasKey}_KM`)) map.set(`${aliasKey}_KM`, km);
+        if (!map.has(`${aliasKey}_PCT`)) map.set(`${aliasKey}_PCT`, pct);
+        if (!map.has(`${aliasKey}_PCT_INT`)) map.set(`${aliasKey}_PCT_INT`, pctInt);
+      }
+    };
+
+    const adicionarTipo = (tipo: "PAV" | "NAO_PAV", graficos: WorkbookGrafico[]): void => {
+      const grupos = this.agruparGraficosPorTrecho(graficos);
+      if (!grupos.length) return;
+
+      const resumo = grupos.find((g) => this.isTrechoNaoInformado(g.trecho));
+      const ordenados = resumo ? [resumo, ...grupos.filter((g) => g !== resumo)] : grupos;
+
+      for (const grupo of ordenados) {
+        for (const grafico of grupo.graficos) {
+          for (const serie of grafico.series) {
+            adicionarSerie(tipo, grafico, serie);
+          }
+        }
+      }
+    };
+
+    adicionarTipo("PAV", workbookPav);
+    adicionarTipo("NAO_PAV", workbookNaoPav);
+
+    return map;
+  }
+
+  private substituirPlaceholdersTemplate(documentXml: string, placeholders: Map<string, string>): string {
+    const padraoTokenComRuns = (token: string): string =>
+      token
+        .split("")
+        .map((ch) => this.escapeRegExp(ch))
+        .join("(?:<[^>]+>)*");
+
+    let updated = documentXml;
+    for (const [key, value] of placeholders.entries()) {
+      const keyRx = this.escapeRegExp(key);
+      const formatos = [
+        new RegExp(`\\{\\{\\s*${keyRx}\\s*\\}\\}`, "g"),
+        new RegExp(`\\{\\{\\s*\\(\\s*${keyRx}\\s*\\)\\s*\\}\\}`, "g"),
+        new RegExp(
+          `\\{(?:<[^>]+>)*\\{(?:<[^>]+>)*\\s*(?:<[^>]+>)*(?:\\((?:<[^>]+>)*\\s*)?${padraoTokenComRuns(key)}(?:<[^>]+>)*\\s*(?:<[^>]+>)*\\)?(?:<[^>]+>)*\\}(?:<[^>]+>)*\\}`,
+          "g",
+        ),
+      ];
+      for (const rx of formatos) {
+        updated = updated.replace(rx, value);
+      }
+    }
+
+    updated = updated.replace(
+      /\{\{\s*\(?\s*((?:PAV|NAO_PAV)_[A-Z0-9_]+_(?:KM|PCT|PCT_INT))\s*\)?\s*\}\}/g,
+      (_match: string, token: string) => {
+        if (token.endsWith("_KM")) return "0,00";
+        if (token.endsWith("_PCT_INT")) return "0";
+        if (token.endsWith("_PCT")) return "0,0";
+        return "0";
+      },
+    );
+
+    return updated;
+  }
+
   private async gerarDocxRegionalViaTemplate(
     template: File,
     workbookPav: WorkbookGrafico[],
@@ -2236,6 +2434,8 @@ export class AppComponent implements OnInit {
     }
 
     documentXml = this.substituirCamposCapaTemplate(documentXml);
+    const placeholdersResumo = this.construirPlaceholdersResumoTemplate(workbookPav, workbookNaoPav);
+    documentXml = this.substituirPlaceholdersTemplate(documentXml, placeholdersResumo);
 
     const gruposByKey = new Map<string, WorkbookTrechoGroup>();
     const gruposPav = this.agruparGraficosPorTrecho(workbookPav);

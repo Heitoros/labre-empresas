@@ -71,11 +71,6 @@
       </label>
 
       <label>
-        Estrutura (JSON)
-        <input type="file" accept=".json" (change)="onEstruturaRelatorioSelecionada($event)" />
-      </label>
-
-      <label>
         Template base (DOCX)
         <input type="file" accept=".docx" (change)="onTemplateDocxSelecionado($event)" />
       </label>
@@ -126,7 +121,6 @@
       </button>
       <button type="button" class="secondary-btn" (click)="logout()">Sair</button>
 
-      <p class="card-meta template-meta" *ngIf="templateEstruturaMensagem">{{ templateEstruturaMensagem }} O DOCX regional passara a usar esses titulos de secao.</p>
       <p class="card-meta template-meta" *ngIf="templateDocxMensagem">{{ templateDocxMensagem }}</p>
     </form>
   </header>
@@ -321,27 +315,61 @@
           </select>
         </label>
       </div>
-      <div class="bar-list">
-        <article class="bar-row bar-evolucao" *ngFor="let item of evolucaoMensal; let i = index">
-          <span class="code">{{ item.competencia }}</span>
-          <div class="bar-bg">
-            <div class="bar-fill" [style.width]="barraEvolucao(valorEvolucaoGeral(item))"></div>
+      <div class="evolucao-compare-grid">
+        <article class="evolucao-compare-card">
+          <h3>{{ tituloValorEvolucao("Geral") }}</h3>
+          <div class="evolucao-bars-vertical">
+            <div class="evolucao-col">
+              <div class="evolucao-bar-bg">
+                <div class="evolucao-bar geral" [style.height]="alturaBarraComparativoEvolucao(mesAnteriorSelecionado(), 'GERAL')"></div>
+              </div>
+              <span class="evolucao-col-label">{{ rotuloMesEvolucao(mesAnteriorSelecionado()) }}</span>
+              <span class="evolucao-col-value">{{ valorEvolucaoPorMes(mesAnteriorSelecionado(), "GERAL") | number: '1.2-2' }} km</span>
+            </div>
+            <div class="evolucao-col">
+              <div class="evolucao-bar-bg">
+                <div class="evolucao-bar geral" [style.height]="alturaBarraComparativoEvolucao(mes, 'GERAL')"></div>
+              </div>
+              <span class="evolucao-col-label">{{ rotuloMesEvolucao(mes) }}</span>
+              <span class="evolucao-col-value">{{ valorEvolucaoPorMes(mes, "GERAL") | number: '1.2-2' }} km</span>
+            </div>
           </div>
-          <span class="value">{{ tituloValorEvolucao("Geral") }} {{ valorEvolucaoGeral(item) | number: '1.2-2' }} km</span>
-          <div class="bar-bg trecho-bg">
-            <div class="bar-fill trecho-fill" [style.width]="barraEvolucao(valorEvolucaoTrecho(item))"></div>
-          </div>
-          <span class="value">{{ tituloValorEvolucao("Trecho") }} {{ valorEvolucaoTrecho(item) | number: '1.2-2' }} km</span>
-          <p class="evolucao-delta" [ngClass]="classeDeltaEvolucao(i, 'GERAL')">
-            Delta geral vs mes anterior: {{ deltaEvolucao(i, "GERAL") | number: '1.2-2' }} km
-            <span *ngIf="deltaEvolucaoPercentual(i, 'GERAL') !== null">({{ deltaEvolucaoPercentual(i, "GERAL") | number: '1.1-1' }}%)</span>
+          <p class="evolucao-delta" [ngClass]="classeDeltaComparativoEvolucao('GERAL')">
+            Delta geral ({{ rotuloMesEvolucao(mes) }} vs {{ rotuloMesEvolucao(mesAnteriorSelecionado()) }}):
+            {{ deltaComparativoEvolucao("GERAL") | number: '1.2-2' }} km
+            <span *ngIf="deltaComparativoEvolucaoPercentual('GERAL') !== null">({{ deltaComparativoEvolucaoPercentual("GERAL") | number: '1.1-1' }}%)</span>
           </p>
-          <p class="evolucao-delta" [ngClass]="classeDeltaEvolucao(i, 'TRECHO')">
-            Delta trecho vs mes anterior: {{ deltaEvolucao(i, "TRECHO") | number: '1.2-2' }} km
-            <span *ngIf="deltaEvolucaoPercentual(i, 'TRECHO') !== null">({{ deltaEvolucaoPercentual(i, "TRECHO") | number: '1.1-1' }}%)</span>
+        </article>
+
+        <article class="evolucao-compare-card">
+          <h3>{{ tituloValorEvolucao("Trecho") }}</h3>
+          <div class="evolucao-bars-vertical">
+            <div class="evolucao-col">
+              <div class="evolucao-bar-bg">
+                <div class="evolucao-bar trecho" [style.height]="alturaBarraComparativoEvolucao(mesAnteriorSelecionado(), 'TRECHO')"></div>
+              </div>
+              <span class="evolucao-col-label">{{ rotuloMesEvolucao(mesAnteriorSelecionado()) }}</span>
+              <span class="evolucao-col-value">{{ valorEvolucaoPorMes(mesAnteriorSelecionado(), "TRECHO") | number: '1.2-2' }} km</span>
+            </div>
+            <div class="evolucao-col">
+              <div class="evolucao-bar-bg">
+                <div class="evolucao-bar trecho" [style.height]="alturaBarraComparativoEvolucao(mes, 'TRECHO')"></div>
+              </div>
+              <span class="evolucao-col-label">{{ rotuloMesEvolucao(mes) }}</span>
+              <span class="evolucao-col-value">{{ valorEvolucaoPorMes(mes, "TRECHO") | number: '1.2-2' }} km</span>
+            </div>
+          </div>
+          <p class="evolucao-delta" [ngClass]="classeDeltaComparativoEvolucao('TRECHO')">
+            Delta trecho ({{ rotuloMesEvolucao(mes) }} vs {{ rotuloMesEvolucao(mesAnteriorSelecionado()) }}):
+            {{ deltaComparativoEvolucao("TRECHO") | number: '1.2-2' }} km
+            <span *ngIf="deltaComparativoEvolucaoPercentual('TRECHO') !== null">({{ deltaComparativoEvolucaoPercentual("TRECHO") | number: '1.1-1' }}%)</span>
           </p>
         </article>
       </div>
+
+      <p class="card-meta">
+        Comparacao direta entre mes selecionado e mes anterior no modo {{ evolucaoModo === "PROGRAMADO" ? "Programado" : "Total carregado" }}.
+      </p>
     </section>
 
     <section class="card" *ngIf="sessaoAtual?.usuario?.perfil === 'ADMIN'">
