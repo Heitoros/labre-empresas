@@ -2040,7 +2040,7 @@ export class AppComponent implements OnInit {
     const cols = 2;
     const gap = 20;
     const pad = 18;
-    const headerH = 64;
+    const headerH = 0;
     const rows = Math.max(1, Math.ceil(graficos.length / cols));
     const width = pad * 2 + cols * tileW + gap * (cols - 1);
     const height = headerH + pad + rows * tileH + (rows - 1) * gap + pad;
@@ -2057,11 +2057,6 @@ export class AppComponent implements OnInit {
 
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, width, height);
-
-    ctx.fillStyle = "#1f2933";
-    ctx.font = "bold 22px DM Sans, Segoe UI, sans-serif";
-    const tituloTrecho = this.isTrechoNaoInformado(trecho) ? this.resumoAnalisePorTipo(tipo) : trecho;
-    ctx.fillText(`${tipo} - ${tituloTrecho}`.slice(0, 82), pad, 38);
 
     for (let i = 0; i < graficos.length; i += 1) {
       const g = graficos[i];

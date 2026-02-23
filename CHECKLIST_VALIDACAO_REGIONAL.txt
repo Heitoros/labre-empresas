@@ -1,0 +1,111 @@
+CHECKLIST DE VALIDACAO REGIONAL - RELATORIO DOCX
+
+Como usar:
+- Preencha uma secao por regiao e competencia (ano/mes).
+- Marque [x] para conforme e [ ] para pendente/nao conforme.
+
+VALIDACAO POR REGIAO
+- Regiao: R__
+- Competencia (AAAA-MM): ____-__
+- Responsavel: ____________________
+- Data: ____/____/______
+
+1) ESTRUTURA DO RELATORIO
+- [ ] Secoes presentes e na ordem do template
+- [ ] Titulos/heading corretos por secao
+- [ ] Sem quebra de layout entre secoes
+
+2) MAPA DE LOCALIZACAO
+- [ ] Secao 1.5 preservada (mapa correto)
+- [ ] Tamanho do mapa igual ao template base
+- [ ] Sem substituicao indevida por grafico
+
+3) GRAFICOS POR SECAO
+- [ ] Bloco de grafico na secao correta
+- [ ] Grafico correspondente ao trecho correto
+- [ ] Legendas e categorias corretas
+- [ ] Sem corte/distorcao de imagem
+- [ ] Sem titulo extra do bloco (PAV - ... / NAO_PAV - ...)
+
+4) PLACEHOLDERS E TEXTO DINAMICO
+- [ ] Nenhum placeholder {{...}} restante no DOCX final
+- [ ] Campos gerais corretos (REGIAO, MES_ANO)
+- [ ] KM e % coerentes com os graficos da secao
+- [ ] Fallback aplicado quando faltar dado (0,00 / 0,0 / 0)
+
+5) VALIDACAO FUNCIONAL NO APP
+- [ ] Filtro correto (Regiao + Ano + Mes)
+- [ ] Importacao com "Processar TT e graficos" marcada
+- [ ] Dados de PAV e NAO_PAV disponiveis
+- [ ] Evolucao mes a mes coerente no modo selecionado
+
+RESULTADO FINAL DA REGIAO
+- [ ] APROVADO
+- [ ] APROVADO COM RESSALVAS
+- [ ] REPROVADO
+
+Observacoes:
+______________________________________________________________________________
+______________________________________________________________________________
+______________________________________________________________________________
+
+INCONSISTENCIAS IDENTIFICADAS (se houver)
+- Item: ____________________
+- Secao: ___________________
+- Evidencia: _______________
+- Acao corretiva: __________
+- Status: [ ] aberto  [ ] corrigido  [ ] validado
+
+====================================================================
+
+VALIDACAO POR REGIAO
+- Regiao: R__
+- Competencia (AAAA-MM): ____-__
+- Responsavel: ____________________
+- Data: ____/____/______
+
+1) ESTRUTURA DO RELATORIO
+- [ ] Secoes presentes e na ordem do template
+- [ ] Titulos/heading corretos por secao
+- [ ] Sem quebra de layout entre secoes
+
+2) MAPA DE LOCALIZACAO
+- [ ] Secao 1.5 preservada (mapa correto)
+- [ ] Tamanho do mapa igual ao template base
+- [ ] Sem substituicao indevida por grafico
+
+3) GRAFICOS POR SECAO
+- [ ] Bloco de grafico na secao correta
+- [ ] Grafico correspondente ao trecho correto
+- [ ] Legendas e categorias corretas
+- [ ] Sem corte/distorcao de imagem
+- [ ] Sem titulo extra do bloco (PAV - ... / NAO_PAV - ...)
+
+4) PLACEHOLDERS E TEXTO DINAMICO
+- [ ] Nenhum placeholder {{...}} restante no DOCX final
+- [ ] Campos gerais corretos (REGIAO, MES_ANO)
+- [ ] KM e % coerentes com os graficos da secao
+- [ ] Fallback aplicado quando faltar dado (0,00 / 0,0 / 0)
+
+5) VALIDACAO FUNCIONAL NO APP
+- [ ] Filtro correto (Regiao + Ano + Mes)
+- [ ] Importacao com "Processar TT e graficos" marcada
+- [ ] Dados de PAV e NAO_PAV disponiveis
+- [ ] Evolucao mes a mes coerente no modo selecionado
+
+RESULTADO FINAL DA REGIAO
+- [ ] APROVADO
+- [ ] APROVADO COM RESSALVAS
+- [ ] REPROVADO
+
+Observacoes:
+______________________________________________________________________________
+______________________________________________________________________________
+______________________________________________________________________________
+
+INCONSISTENCIAS IDENTIFICADAS (se houver)
+- Item: ____________________
+- Secao: ___________________
+- Evidencia: _______________
+- Acao corretiva: __________
+- Status: [ ] aberto  [ ] corrigido  [ ] validado
